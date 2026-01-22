@@ -1,0 +1,86 @@
+"Reddit Noir: The Daily Murder Mystery" 🕵️‍♂️🔍
+Un jeu d'enquête quotidien qui utilise GameMaker pour l'immersion et Reddit pour la collaboration.
+
+CONCEPT GÉNIAL :
+Chaque jour, un nouveau meurtre à résoudre sur Reddit.
+Mais les indices sont cachés dans de vrais posts Reddit du jour.
+
+MÉCANIQUE PRINCIPALE :
+Phase 1 : La Scène du Crime (GameMaker)
+text
+🎮 SCÈNE DU CRIME - JOUR #1
+[VISUAL GAMEMAKER 2D]
+Une pièce pixel art avec :
+• Un corps (pixel art)
+• 5 objets interactifs
+• 3 témoins à interroger
+• 1 journal intime ouvert
+Phase 2 : Les Indices Reddit
+text
+🔍 LES INDICES DU JOUR SONT CACHÉS DANS :
+1. r/UnresolvedMysteries → Motif du crime
+2. r/RBI → Technique utilisée  
+3. r/TrueCrime → Profil du tueur
+4. r/Whatisthisthing → Arme du crime
+5. r/TipOfMyTongue → Mobile caché
+
+📌 VOTRE MISSION :
+Trouvez les 5 posts dans ces subreddits
+qui contiennent des indices pour VOTRE cas.
+Phase 3 : Arbre de Décision Interactif
+text
+🎮 INTERROGATOIRE (GAMEMAKER)
+
+[SCÈNE : Bureau du détective]
+TÉMOIN : "J'ai vu quelque chose..."
+
+OPTIONS :
+A. "Décrivez la personne." (→ Indice physique)
+B. "À quelle heure ?" (→ Alibi)
+C. "Pourquoi étiez-vous là ?" (→ Suspicion)
+D. "Montrez-moi où." (→ Carte)
+
+💡 CHAQUE CHOIX :
+• Débloque de nouvelles pistes
+• Ferme d'autres possibilités
+• Influence la fin
+EXEMPLE COMPLET D'UNE JOURNÉE :
+Jour 1 : "L'Affaire du Modérateur Disparu"
+text
+🕵️‍♂️ CAS #001 : u/RedditDetective
+
+SCÈNE DU CRIME :
+• Lieu : Serveur Discord r/Mystery
+• Victime : Modérateur senior
+• Objets : Clavier brisé, tasse de café, note chiffrée
+
+🎮 ACTION IMMÉDIATE :
+Examinez les objets (GameMaker click)
+• Clavier → Message partiel : "Je sais pour..."
+• Tasse → Empreinte de lèvre
+• Note → Code : "A1B2"
+Les 5 Indices Reddit à Trouver :
+text
+1. r/UnresolvedMysteries : Post sur "employé disparu après découverte fraude"
+2. r/RBI : "Comment cracker un code A1B2C3 ?"
+3. r/TrueCrime : "Profils de whistleblowers"
+4. r/Whatisthisthing : "Objet mystère trouvé bureau"
+5. r/TipOfMyTongue : "Jeu avec mot de passe 'red herring'"
+Arbre de Décision Critique :
+text
+🎭 INTERROGATOIRE DU SUSPECT #1 :
+
+"Où étiez-vous hier soir ?"
+
+CHOIX :
+A. "À mon bureau" → Vérifiez les logs Discord
+B. "Chez moi" → Demandez preuve
+C. "Je ne me souviens pas" → Pressions
+D. "Pourquoi cette question ?" → Suspicieux
+
+⬇️ SI VOUS CHOISISSEZ A :
+"Montrez-moi les logs."
+
+• LOGS TROUVÉS : Il était en ligne
+• CONTRADICTION : Pas d'activité enregistrée
+• NOUVELLE PISTE : Faux alibi → Coupable probable

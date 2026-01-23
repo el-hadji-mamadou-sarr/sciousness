@@ -1,5 +1,6 @@
 import { Scene, GameObjects } from 'phaser';
 import { Case, Suspect, PlayerProgress, InitGameResponse, AccuseResponse } from '../../../shared/types/game';
+import { case1 } from './crime-scenes/case1';
 
 export class Accusation extends Scene {
   private currentCase: Case | null = null;
@@ -78,17 +79,8 @@ export class Accusation extends Scene {
   }
 
   private createFallbackCase(): void {
-    this.currentCase = {
-      id: 'case_001', title: "The Moderator's Last Ban", dayNumber: 1, intro: '',
-      victimName: 'u/ModeratorMax', victimDescription: '', location: 'Home Office',
-      crimeSceneObjects: [],
-      suspects: [
-        { id: 'suspect_banned', name: 'u/BannedForever', description: 'Banned last week.', alibi: 'At a bar.', isGuilty: false, dialogueOptions: [] },
-        { id: 'suspect_comod', name: 'u/CoModeratorSam', description: 'Fellow mod.', alibi: 'Asleep.', isGuilty: true, dialogueOptions: [] },
-        { id: 'suspect_ex', name: 'u/ExPartner', description: "Victim's ex.", alibi: 'At a movie.', isGuilty: false, dialogueOptions: [] },
-      ],
-      clues: [],
-    };
+    // Use the case1 data from the crime-scenes folder
+    this.currentCase = { ...case1 };
     this.progress = { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
   }
 

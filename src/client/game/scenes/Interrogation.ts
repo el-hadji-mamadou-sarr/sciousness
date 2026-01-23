@@ -7,6 +7,7 @@ import {
   InitGameResponse,
   FindClueResponse,
 } from '../../../shared/types/game';
+import { case1 } from './crime-scenes/case1';
 
 export class Interrogation extends Scene {
   private currentCase: Case | null = null;
@@ -83,49 +84,8 @@ export class Interrogation extends Scene {
   }
 
   private createFallbackCase(): void {
-    this.currentCase = {
-      id: 'case_001',
-      title: "The Moderator's Last Ban",
-      dayNumber: 1,
-      intro: '',
-      victimName: 'u/ModeratorMax',
-      victimDescription: '',
-      location: 'Home Office',
-      crimeSceneObjects: [],
-      suspects: [
-        {
-          id: 'suspect_banned', name: 'u/BannedForever',
-          description: 'Permanently banned last week.',
-          alibi: 'At a bar.',
-          isGuilty: false,
-          dialogueOptions: [
-            { id: 'banned_1', text: 'Where were you?', response: "At O'Malley's Bar.", nextOptions: ['banned_2'] },
-            { id: 'banned_2', text: 'Threatening messages?', response: "I was angry, but I didn't kill anyone!", unlocksClue: 'clue_threats' },
-          ],
-        },
-        {
-          id: 'suspect_comod', name: 'u/CoModeratorSam',
-          description: 'Fellow moderator.',
-          alibi: 'Asleep at home.',
-          isGuilty: true,
-          dialogueOptions: [
-            { id: 'comod_1', text: 'Where were you?', response: 'Home, asleep by 10 PM.', isSuspicious: true, nextOptions: ['comod_2'] },
-            { id: 'comod_2', text: 'Gardening supplies?', response: 'Yes, I have a garden. Why?', isSuspicious: true, unlocksClue: 'clue_garden' },
-          ],
-        },
-        {
-          id: 'suspect_ex', name: 'u/ExPartner',
-          description: "Victim's ex.",
-          alibi: 'At a movie.',
-          isGuilty: false,
-          dialogueOptions: [
-            { id: 'ex_1', text: 'Where were you?', response: 'At the Cineplex. Have the stub.', nextOptions: ['ex_2'] },
-            { id: 'ex_2', text: 'Why reconnect?', response: 'Max wanted to talk.', unlocksClue: 'clue_meeting' },
-          ],
-        },
-      ],
-      clues: [],
-    };
+    // Use the case1 data from the crime-scenes folder
+    this.currentCase = { ...case1 };
     this.progress = { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
   }
 

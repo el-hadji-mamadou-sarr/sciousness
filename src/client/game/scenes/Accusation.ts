@@ -1,11 +1,5 @@
 import { Scene, GameObjects } from 'phaser';
-import {
-  Case,
-  Suspect,
-  PlayerProgress,
-  InitGameResponse,
-  AccuseResponse,
-} from '../../../shared/types/game';
+import { Case, Suspect, PlayerProgress, InitGameResponse, AccuseResponse } from '../../../shared/types/game';
 
 export class Accusation extends Scene {
   private currentCase: Case | null = null;
@@ -19,52 +13,51 @@ export class Accusation extends Scene {
     super('Accusation');
   }
 
+  private getFontSize(base: number): number {
+    const { width } = this.scale;
+    // Use 320px as reference for mobile, scale up from there
+    const scale = Math.min(width / 320, 1.5);
+    // Ensure minimum readable size (at least 70% of base, minimum 10px)
+    return Math.max(Math.floor(base * scale), Math.floor(base * 0.7), 10);
+  }
+
+  private isMobile(): boolean {
+    return this.scale.width < 500;
+  }
+
   async create() {
     const { width, height } = this.scale;
 
-    // Dark courtroom-style background
     this.cameras.main.setBackgroundColor(0x0a0a14);
-
-    // Create scanline effect
     this.createScanlines(width, height);
 
+    const mobile = this.isMobile();
+
     // Title
-    this.add
-      .text(width / 2, 30, 'MAKE YOUR ACCUSATION', {
-        fontFamily: 'Courier New',
-        fontSize: '24px',
-        color: '#ff4444',
-        stroke: '#000000',
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5);
+    this.add.text(width / 2, mobile ? 18 : 28, 'ACCUSATION', {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(18)}px`,
+      color: '#ff4444', stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5);
 
-    // Warning text
-    this.add
-      .text(width / 2, 60, 'Choose carefully - you only get one chance!', {
-        fontFamily: 'Courier New',
-        fontSize: '12px',
-        color: '#ffff00',
-      })
-      .setOrigin(0.5);
+    // Warning
+    this.add.text(width / 2, mobile ? 38 : 55, 'One chance only!', {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#ffff00',
+    }).setOrigin(0.5);
 
-    // Load game data
     await this.loadGameData();
 
-    // Create suspect selection
     this.createSuspectSelection(width, height);
-
-    // Create confirmation panel (hidden initially)
     this.createConfirmPanel(width, height);
-
-    // Create navigation
     this.createNavigationButtons(width, height);
+
+    this.scale.on('resize', () => this.scene.restart());
   }
 
   private createScanlines(width: number, height: number): void {
     const graphics = this.add.graphics();
-    graphics.lineStyle(1, 0x000000, 0.15);
-    for (let y = 0; y < height; y += 3) {
+    const spacing = this.isMobile() ? 5 : 3;
+    graphics.lineStyle(1, 0x000000, 0.1);
+    for (let y = 0; y < height; y += spacing) {
       graphics.lineBetween(0, y, width, y);
     }
   }
@@ -84,58 +77,27 @@ export class Accusation extends Scene {
 
   private createFallbackCase(): void {
     this.currentCase = {
-      id: 'case_001',
-      title: "The Moderator's Last Ban",
-      dayNumber: 1,
-      intro: '',
-      victimName: 'u/ModeratorMax',
-      victimDescription: '',
-      location: 'Home Office',
+      id: 'case_001', title: "The Moderator's Last Ban", dayNumber: 1, intro: '',
+      victimName: 'u/ModeratorMax', victimDescription: '', location: 'Home Office',
       crimeSceneObjects: [],
       suspects: [
-        {
-          id: 'suspect_banned',
-          name: 'u/BannedForever',
-          description: 'A user who was permanently banned last week.',
-          alibi: 'Claims to have been at a bar.',
-          isGuilty: false,
-          dialogueOptions: [],
-        },
-        {
-          id: 'suspect_comod',
-          name: 'u/CoModeratorSam',
-          description: 'Fellow moderator with a recent disagreement.',
-          alibi: 'Says they were asleep at home.',
-          isGuilty: true,
-          dialogueOptions: [],
-        },
-        {
-          id: 'suspect_ex',
-          name: 'u/ExPartner_2019',
-          description: "The victim's ex-partner.",
-          alibi: 'Was at a movie theater.',
-          isGuilty: false,
-          dialogueOptions: [],
-        },
+        { id: 'suspect_banned', name: 'u/BannedForever', description: 'Banned last week.', alibi: 'At a bar.', isGuilty: false, dialogueOptions: [] },
+        { id: 'suspect_comod', name: 'u/CoModeratorSam', description: 'Fellow mod.', alibi: 'Asleep.', isGuilty: true, dialogueOptions: [] },
+        { id: 'suspect_ex', name: 'u/ExPartner', description: "Victim's ex.", alibi: 'At a movie.', isGuilty: false, dialogueOptions: [] },
       ],
       clues: [],
     };
-    this.progress = {
-      odayNumber: 1,
-      cluesFound: [],
-      suspectsInterrogated: [],
-      solved: false,
-      correct: false,
-    };
+    this.progress = { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
   }
 
   private createSuspectSelection(width: number, height: number): void {
     if (!this.currentCase) return;
 
+    const mobile = this.isMobile();
     const suspects = this.currentCase.suspects;
-    const startY = 120;
-    const cardHeight = 100;
-    const cardSpacing = 20;
+    const startY = mobile ? 60 : 90;
+    const cardHeight = mobile ? 70 : 90;
+    const cardSpacing = mobile ? 8 : 15;
 
     suspects.forEach((suspect, index) => {
       const y = startY + index * (cardHeight + cardSpacing);
@@ -143,68 +105,51 @@ export class Accusation extends Scene {
       this.suspectButtons.push(container);
     });
 
-    // Clues summary
     this.createCluesSummary(width, height);
   }
 
-  private createSuspectCard(
-    suspect: Suspect,
-    width: number,
-    y: number,
-    height: number
-  ): GameObjects.Container {
+  private createSuspectCard(suspect: Suspect, width: number, y: number, cardHeight: number): GameObjects.Container {
+    const mobile = this.isMobile();
     const container = this.add.container(width / 2, y);
-    const cardWidth = width - 60;
+    const cardWidth = width - (mobile ? 20 : 60);
 
-    // Background
     const bg = this.add.graphics();
     bg.fillStyle(0x16213e, 0.9);
-    bg.fillRoundedRect(-cardWidth / 2, 0, cardWidth, height, 8);
+    bg.fillRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
     bg.lineStyle(2, 0x394867, 1);
-    bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, height, 8);
+    bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
     container.add(bg);
 
-    // Portrait placeholder
+    // Portrait
+    const portraitSize = mobile ? 40 : 55;
     const portrait = this.add.graphics();
     portrait.fillStyle(0x394867, 1);
-    portrait.fillRect(-cardWidth / 2 + 15, 10, 60, 80);
+    portrait.fillRect(-cardWidth / 2 + 8, 8, portraitSize, portraitSize);
     portrait.lineStyle(2, 0x5c6b8a, 1);
-    portrait.strokeRect(-cardWidth / 2 + 15, 10, 60, 80);
-    // Simple pixel face
+    portrait.strokeRect(-cardWidth / 2 + 8, 8, portraitSize, portraitSize);
     portrait.fillStyle(0xcccccc, 1);
-    portrait.fillCircle(-cardWidth / 2 + 45, 40, 18);
+    portrait.fillCircle(-cardWidth / 2 + 8 + portraitSize / 2, 8 + portraitSize / 2 - 5, portraitSize / 4);
     portrait.fillStyle(0x222222, 1);
-    portrait.fillCircle(-cardWidth / 2 + 40, 35, 3);
-    portrait.fillCircle(-cardWidth / 2 + 50, 35, 3);
+    portrait.fillCircle(-cardWidth / 2 + 8 + portraitSize / 2 - 4, 8 + portraitSize / 2 - 8, 2);
+    portrait.fillCircle(-cardWidth / 2 + 8 + portraitSize / 2 + 4, 8 + portraitSize / 2 - 8, 2);
     container.add(portrait);
 
-    // Name
-    const nameText = this.add
-      .text(-cardWidth / 2 + 90, 15, suspect.name, {
-        fontFamily: 'Courier New',
-        fontSize: '18px',
-        color: '#ffffff',
-      });
-    container.add(nameText);
+    const textX = -cardWidth / 2 + portraitSize + 18;
 
-    // Description
-    const descText = this.add
-      .text(-cardWidth / 2 + 90, 40, suspect.description, {
-        fontFamily: 'Courier New',
-        fontSize: '11px',
-        color: '#888888',
-        wordWrap: { width: cardWidth - 180 },
-      });
-    container.add(descText);
+    container.add(this.add.text(textX, 10, suspect.name, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ffffff',
+    }));
+
+    container.add(this.add.text(textX, mobile ? 28 : 32, suspect.description, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(8)}px`, color: '#888888',
+      wordWrap: { width: cardWidth - portraitSize - (mobile ? 80 : 100) },
+    }));
 
     // Accuse button
     const accuseBtn = this.add
-      .text(cardWidth / 2 - 25, height / 2, 'ACCUSE', {
-        fontFamily: 'Courier New',
-        fontSize: '14px',
-        color: '#ff4444',
-        backgroundColor: '#2a1a1a',
-        padding: { x: 12, y: 8 },
+      .text(cardWidth / 2 - 12, cardHeight / 2, 'ACCUSE', {
+        fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#ff4444',
+        backgroundColor: '#2a1a1a', padding: { x: 8, y: 5 },
       })
       .setOrigin(1, 0.5)
       .setInteractive({ useHandCursor: true })
@@ -212,17 +157,17 @@ export class Accusation extends Scene {
         accuseBtn.setColor('#ff8888');
         bg.clear();
         bg.fillStyle(0x1e2a4a, 0.95);
-        bg.fillRoundedRect(-cardWidth / 2, 0, cardWidth, height, 8);
+        bg.fillRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
         bg.lineStyle(2, 0xff4444, 1);
-        bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, height, 8);
+        bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
       })
       .on('pointerout', () => {
         accuseBtn.setColor('#ff4444');
         bg.clear();
         bg.fillStyle(0x16213e, 0.9);
-        bg.fillRoundedRect(-cardWidth / 2, 0, cardWidth, height, 8);
+        bg.fillRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
         bg.lineStyle(2, 0x394867, 1);
-        bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, height, 8);
+        bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
       })
       .on('pointerdown', () => this.showConfirmation(suspect));
     container.add(accuseBtn);
@@ -233,48 +178,33 @@ export class Accusation extends Scene {
   private createCluesSummary(width: number, height: number): void {
     if (!this.currentCase || !this.progress) return;
 
-    const panelY = height - 150;
-    const panelHeight = 100;
-    const panelWidth = width - 60;
+    const mobile = this.isMobile();
+    const panelHeight = mobile ? 60 : 80;
+    const panelY = height - panelHeight - (mobile ? 35 : 50);
+    const panelWidth = width - (mobile ? 20 : 60);
 
     const container = this.add.container(width / 2, panelY);
 
-    // Background
     const bg = this.add.graphics();
     bg.fillStyle(0x0f3460, 0.8);
-    bg.fillRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 8);
+    bg.fillRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 6);
     bg.lineStyle(1, 0xffd700, 0.5);
-    bg.strokeRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 8);
+    bg.strokeRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 6);
     container.add(bg);
 
-    // Title
-    const title = this.add
-      .text(0, 15, `EVIDENCE COLLECTED: ${this.progress.cluesFound.length} / ${this.currentCase.clues.length}`, {
-        fontFamily: 'Courier New',
-        fontSize: '14px',
-        color: '#ffd700',
-      })
-      .setOrigin(0.5);
-    container.add(title);
+    container.add(this.add.text(0, 12, `EVIDENCE: ${this.progress.cluesFound.length}/${this.currentCase.clues.length}`, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#ffd700',
+    }).setOrigin(0.5));
 
-    // List found clues
-    const foundClues = this.currentCase.clues.filter((c) =>
-      this.progress!.cluesFound.includes(c.id)
-    );
+    const foundClues = this.currentCase.clues.filter((c) => this.progress!.cluesFound.includes(c.id));
+    let clueText = foundClues.length > 0
+      ? foundClues.map((c) => `• ${c.name}`).join(mobile ? ', ' : '\n')
+      : 'No clues yet!';
 
-    let clueText = foundClues.map((c) => `• ${c.name}`).join('\n');
-    if (clueText.length === 0) {
-      clueText = 'No clues found yet. Investigate the crime scene!';
-    }
-
-    const cluesList = this.add
-      .text(-panelWidth / 2 + 20, 35, clueText, {
-        fontFamily: 'Courier New',
-        fontSize: '11px',
-        color: '#aaaaaa',
-        wordWrap: { width: panelWidth - 40 },
-      });
-    container.add(cluesList);
+    container.add(this.add.text(-panelWidth / 2 + 12, 28, clueText, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(8)}px`, color: '#aaaaaa',
+      wordWrap: { width: panelWidth - 24 },
+    }));
   }
 
   private createConfirmPanel(width: number, height: number): void {
@@ -290,8 +220,9 @@ export class Accusation extends Scene {
     this.confirmPanel.removeAll(true);
 
     const { width, height } = this.scale;
-    const panelWidth = 350;
-    const panelHeight = 200;
+    const mobile = this.isMobile();
+    const panelWidth = mobile ? width - 40 : 320;
+    const panelHeight = mobile ? 160 : 180;
 
     // Dim background
     const dimBg = this.add.graphics();
@@ -299,52 +230,31 @@ export class Accusation extends Scene {
     dimBg.fillRect(-width / 2, -height / 2, width, height);
     this.confirmPanel.add(dimBg);
 
-    // Panel background
+    // Panel
     const bg = this.add.graphics();
     bg.fillStyle(0x1a1a2e, 1);
-    bg.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 10);
+    bg.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 8);
     bg.lineStyle(3, 0xff4444, 1);
-    bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 10);
+    bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 8);
     this.confirmPanel.add(bg);
 
-    // Title
-    const title = this.add
-      .text(0, -panelHeight / 2 + 25, 'CONFIRM ACCUSATION', {
-        fontFamily: 'Courier New',
-        fontSize: '18px',
-        color: '#ff4444',
-      })
-      .setOrigin(0.5);
-    this.confirmPanel.add(title);
+    this.confirmPanel.add(this.add.text(0, -panelHeight / 2 + 20, 'CONFIRM', {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#ff4444',
+    }).setOrigin(0.5));
 
-    // Suspect name
-    const suspectText = this.add
-      .text(0, -20, `Accuse ${suspect.name}?`, {
-        fontFamily: 'Courier New',
-        fontSize: '16px',
-        color: '#ffffff',
-      })
-      .setOrigin(0.5);
-    this.confirmPanel.add(suspectText);
+    this.confirmPanel.add(this.add.text(0, -10, `Accuse ${suspect.name}?`, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ffffff',
+    }).setOrigin(0.5));
 
-    // Warning
-    const warning = this.add
-      .text(0, 15, 'This action cannot be undone!', {
-        fontFamily: 'Courier New',
-        fontSize: '12px',
-        color: '#ffff00',
-      })
-      .setOrigin(0.5);
-    this.confirmPanel.add(warning);
+    this.confirmPanel.add(this.add.text(0, 15, 'Cannot be undone!', {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(9)}px`, color: '#ffff00',
+    }).setOrigin(0.5));
 
-    // Confirm button
+    const btnY = panelHeight / 2 - 30;
     const confirmBtn = this.add
-      .text(-60, panelHeight / 2 - 40, '[ CONFIRM ]', {
-        fontFamily: 'Courier New',
-        fontSize: '14px',
-        color: '#ff4444',
-        backgroundColor: '#2a1a1a',
-        padding: { x: 12, y: 8 },
+      .text(-50, btnY, '[YES]', {
+        fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ff4444',
+        backgroundColor: '#2a1a1a', padding: { x: 10, y: 6 },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
@@ -353,14 +263,10 @@ export class Accusation extends Scene {
       .on('pointerdown', () => this.makeAccusation());
     this.confirmPanel.add(confirmBtn);
 
-    // Cancel button
     const cancelBtn = this.add
-      .text(60, panelHeight / 2 - 40, '[ CANCEL ]', {
-        fontFamily: 'Courier New',
-        fontSize: '14px',
-        color: '#888888',
-        backgroundColor: '#1a1a1a',
-        padding: { x: 12, y: 8 },
+      .text(50, btnY, '[NO]', {
+        fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#888888',
+        backgroundColor: '#1a1a1a', padding: { x: 10, y: 6 },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
@@ -373,9 +279,7 @@ export class Accusation extends Scene {
   }
 
   private hideConfirmation(): void {
-    if (this.confirmPanel) {
-      this.confirmPanel.setVisible(false);
-    }
+    if (this.confirmPanel) this.confirmPanel.setVisible(false);
     this.selectedSuspect = null;
   }
 
@@ -390,7 +294,6 @@ export class Accusation extends Scene {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ suspectId: this.selectedSuspect.id }),
       });
-
       if (response.ok) {
         const data = (await response.json()) as AccuseResponse;
         isCorrect = data.correct;
@@ -404,89 +307,62 @@ export class Accusation extends Scene {
   }
 
   private showResult(correct: boolean): void {
-    // Hide confirmation panel
-    if (this.confirmPanel) {
-      this.confirmPanel.setVisible(false);
-    }
-
-    // Hide suspect cards
+    if (this.confirmPanel) this.confirmPanel.setVisible(false);
     this.suspectButtons.forEach((btn) => btn.setVisible(false));
 
     const { width, height } = this.scale;
+    const mobile = this.isMobile();
 
     this.resultPanel = this.add.container(width / 2, height / 2);
 
-    const panelWidth = width - 80;
-    const panelHeight = height - 100;
+    const panelWidth = width - (mobile ? 30 : 60);
+    const panelHeight = height - (mobile ? 60 : 80);
 
-    // Background
     const bg = this.add.graphics();
     bg.fillStyle(correct ? 0x0a2a0a : 0x2a0a0a, 0.95);
-    bg.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 15);
-    bg.lineStyle(4, correct ? 0x00ff00 : 0xff0000, 1);
-    bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 15);
+    bg.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 10);
+    bg.lineStyle(3, correct ? 0x00ff00 : 0xff0000, 1);
+    bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 10);
     this.resultPanel.add(bg);
 
-    // Result title
-    const titleText = correct ? 'CASE SOLVED!' : 'WRONG ACCUSATION';
+    const titleText = correct ? 'SOLVED!' : 'WRONG!';
     const titleColor = correct ? '#00ff00' : '#ff0000';
-    const title = this.add
-      .text(0, -panelHeight / 2 + 50, titleText, {
-        fontFamily: 'Courier New',
-        fontSize: '32px',
-        color: titleColor,
-        stroke: '#000000',
-        strokeThickness: 4,
-      })
-      .setOrigin(0.5);
-    this.resultPanel.add(title);
+    this.resultPanel.add(this.add.text(0, -panelHeight / 2 + 35, titleText, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(24)}px`,
+      color: titleColor, stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5));
 
-    // Explanation
     let explanation = '';
     if (correct) {
-      explanation = `Congratulations, Detective!\n\nYou correctly identified ${this.selectedSuspect?.name} as the killer.\n\nThe evidence pointed to them:\n• The poison matched plants from their garden\n• The mud tracks contained their fertilizer\n• The victim was about to expose their vote manipulation\n\nTheir "perfect alibi" of being asleep at home was a lie.\nThey had motive, means, and opportunity.`;
+      explanation = `You got ${this.selectedSuspect?.name}!\n\nEvidence:\n• Poison from their garden\n• Mud tracks with their fertilizer\n• Victim exposed their scheme\n\nGreat detective work!`;
     } else {
-      explanation = `Case Failed!\n\n${this.selectedSuspect?.name} was innocent.\n\nThe real killer was u/CoModeratorSam.\n\nYou missed crucial evidence:\n• The poison came from plants in their garden\n• Mud tracks contained fertilizer only they used\n• The victim discovered their vote manipulation scheme\n\nBetter luck next time, Detective.`;
+      explanation = `${this.selectedSuspect?.name} was innocent.\n\nThe killer: u/CoModeratorSam\n\n• Poison from garden plants\n• Unique fertilizer in mud\n• Vote manipulation motive\n\nBetter luck next time!`;
     }
 
-    const explanationText = this.add
-      .text(0, 20, explanation, {
-        fontFamily: 'Courier New',
-        fontSize: '13px',
-        color: '#cccccc',
-        align: 'center',
-        wordWrap: { width: panelWidth - 60 },
-        lineSpacing: 5,
-      })
-      .setOrigin(0.5);
-    this.resultPanel.add(explanationText);
+    this.resultPanel.add(this.add.text(0, 10, explanation, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#cccccc',
+      align: 'center', wordWrap: { width: panelWidth - 40 }, lineSpacing: 4,
+    }).setOrigin(0.5));
 
-    // Play again button
     const playAgainBtn = this.add
-      .text(0, panelHeight / 2 - 50, '[ RETURN TO MENU ]', {
-        fontFamily: 'Courier New',
-        fontSize: '16px',
-        color: '#ffffff',
-        backgroundColor: '#333333',
-        padding: { x: 20, y: 12 },
+      .text(0, panelHeight / 2 - 35, '[MENU]', {
+        fontFamily: 'Courier New', fontSize: `${this.getFontSize(13)}px`, color: '#ffffff',
+        backgroundColor: '#333333', padding: { x: 15, y: 8 },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => playAgainBtn.setBackgroundColor('#444444'))
-      .on('pointerout', () => playAgainBtn.setBackgroundColor('#333333'))
+      .on('pointerover', () => playAgainBtn.setStyle({ backgroundColor: '#444444' }))
+      .on('pointerout', () => playAgainBtn.setStyle({ backgroundColor: '#333333' }))
       .on('pointerdown', () => this.scene.start('MainMenu'));
     this.resultPanel.add(playAgainBtn);
   }
 
   private createNavigationButtons(_width: number, height: number): void {
-    // Back button
+    const mobile = this.isMobile();
     const backBtn = this.add
-      .text(30, height - 25, '[ BACK ]', {
-        fontFamily: 'Courier New',
-        fontSize: '13px',
-        color: '#888888',
-        backgroundColor: '#1a1a2e',
-        padding: { x: 12, y: 6 },
+      .text(mobile ? 15 : 25, height - (mobile ? 15 : 22), '[BACK]', {
+        fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#888888',
+        backgroundColor: '#1a1a2e', padding: { x: 8, y: 4 },
       })
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => backBtn.setColor('#ffffff'))

@@ -20,42 +20,50 @@ export class Interrogation extends Scene {
     super('Interrogation');
   }
 
+  private getFontSize(base: number): number {
+    const { width } = this.scale;
+    // Use 320px as reference for mobile, scale up from there
+    const scale = Math.min(width / 320, 1.5);
+    // Ensure minimum readable size (at least 70% of base, minimum 10px)
+    return Math.max(Math.floor(base * scale), Math.floor(base * 0.7), 10);
+  }
+
+  private isMobile(): boolean {
+    return this.scale.width < 500;
+  }
+
   async create() {
     const { width, height } = this.scale;
 
-    // Dark interrogation room background
     this.cameras.main.setBackgroundColor(0x0f0f1a);
-
-    // Create scanline effect
     this.createScanlines(width, height);
 
     // Title
     this.add
-      .text(width / 2, 25, 'INTERROGATION ROOM', {
+      .text(width / 2, this.isMobile() ? 18 : 25, 'INTERROGATION', {
         fontFamily: 'Courier New',
-        fontSize: '22px',
+        fontSize: `${this.getFontSize(18)}px`,
         color: '#ff4444',
         stroke: '#000000',
         strokeThickness: 2,
       })
       .setOrigin(0.5);
 
-    // Load game data
     await this.loadGameData();
 
-    // Create UI elements
     this.createSuspectPanel(width, height);
     this.createDialoguePanel(width, height);
     this.createNavigationButtons(width, height);
-
-    // Show first suspect
     this.showSuspect(0);
+
+    this.scale.on('resize', () => this.scene.restart());
   }
 
   private createScanlines(width: number, height: number): void {
     const graphics = this.add.graphics();
-    graphics.lineStyle(1, 0x000000, 0.15);
-    for (let y = 0; y < height; y += 3) {
+    const spacing = this.isMobile() ? 5 : 3;
+    graphics.lineStyle(1, 0x000000, 0.1);
+    for (let y = 0; y < height; y += spacing) {
       graphics.lineBetween(0, y, width, y);
     }
   }
@@ -85,86 +93,44 @@ export class Interrogation extends Scene {
       crimeSceneObjects: [],
       suspects: [
         {
-          id: 'suspect_banned',
-          name: 'u/BannedForever',
-          description: 'A user who was permanently banned last week.',
-          alibi: 'Claims to have been at a bar.',
+          id: 'suspect_banned', name: 'u/BannedForever',
+          description: 'Permanently banned last week.',
+          alibi: 'At a bar.',
           isGuilty: false,
           dialogueOptions: [
-            {
-              id: 'banned_1',
-              text: 'Where were you last night?',
-              response: "I was at O'Malley's Bar until midnight.",
-              nextOptions: ['banned_2'],
-            },
-            {
-              id: 'banned_2',
-              text: 'You sent threatening messages. Why?',
-              response: "I was angry about the ban. But I didn't kill anyone!",
-              unlocksClue: 'clue_threats',
-            },
+            { id: 'banned_1', text: 'Where were you?', response: "At O'Malley's Bar.", nextOptions: ['banned_2'] },
+            { id: 'banned_2', text: 'Threatening messages?', response: "I was angry, but I didn't kill anyone!", unlocksClue: 'clue_threats' },
           ],
         },
         {
-          id: 'suspect_comod',
-          name: 'u/CoModeratorSam',
-          description: 'Fellow moderator with a recent disagreement.',
-          alibi: 'Says they were asleep at home.',
+          id: 'suspect_comod', name: 'u/CoModeratorSam',
+          description: 'Fellow moderator.',
+          alibi: 'Asleep at home.',
           isGuilty: true,
           dialogueOptions: [
-            {
-              id: 'comod_1',
-              text: 'Where were you last night?',
-              response: 'I was home, asleep by 10 PM.',
-              isSuspicious: true,
-              nextOptions: ['comod_2'],
-            },
-            {
-              id: 'comod_2',
-              text: 'Do you own any gardening supplies?',
-              response: 'I... yes, I have a garden. Why?',
-              isSuspicious: true,
-              unlocksClue: 'clue_garden',
-            },
+            { id: 'comod_1', text: 'Where were you?', response: 'Home, asleep by 10 PM.', isSuspicious: true, nextOptions: ['comod_2'] },
+            { id: 'comod_2', text: 'Gardening supplies?', response: 'Yes, I have a garden. Why?', isSuspicious: true, unlocksClue: 'clue_garden' },
           ],
         },
         {
-          id: 'suspect_ex',
-          name: 'u/ExPartner_2019',
-          description: "The victim's ex-partner.",
-          alibi: 'Was at a movie theater.',
+          id: 'suspect_ex', name: 'u/ExPartner',
+          description: "Victim's ex.",
+          alibi: 'At a movie.',
           isGuilty: false,
           dialogueOptions: [
-            {
-              id: 'ex_1',
-              text: 'Where were you last night?',
-              response: 'At the Cineplex watching a movie. I have the ticket stub.',
-              nextOptions: ['ex_2'],
-            },
-            {
-              id: 'ex_2',
-              text: 'Why did you reconnect with the victim?',
-              response: 'Max reached out wanting to talk about something important.',
-              unlocksClue: 'clue_meeting',
-            },
+            { id: 'ex_1', text: 'Where were you?', response: 'At the Cineplex. Have the stub.', nextOptions: ['ex_2'] },
+            { id: 'ex_2', text: 'Why reconnect?', response: 'Max wanted to talk.', unlocksClue: 'clue_meeting' },
           ],
         },
       ],
       clues: [],
     };
-    this.progress = {
-      odayNumber: 1,
-      cluesFound: [],
-      suspectsInterrogated: [],
-      solved: false,
-      correct: false,
-    };
+    this.progress = { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
   }
 
   private createSuspectPanel(width: number, _height: number): void {
-    this.suspectPanel = this.add.container(width / 2, 150);
-
-    // Will be populated when showing a suspect
+    const mobile = this.isMobile();
+    this.suspectPanel = this.add.container(width / 2, mobile ? 100 : 130);
   }
 
   private showSuspect(index: number): void {
@@ -177,108 +143,82 @@ export class Interrogation extends Scene {
     if (!suspect) return;
 
     this.currentSuspect = suspect;
-
-    // Clear panel
     this.suspectPanel.removeAll(true);
 
     const { width } = this.scale;
-    const panelWidth = width - 60;
+    const mobile = this.isMobile();
+    const panelWidth = width - (mobile ? 16 : 60);
+    const panelHeight = mobile ? 120 : 120;
 
     // Background
     const bg = this.add.graphics();
     bg.fillStyle(0x1a1a2e, 0.95);
-    bg.fillRoundedRect(-panelWidth / 2, -60, panelWidth, 120, 8);
+    bg.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 6);
     bg.lineStyle(2, 0xff4444, 0.5);
-    bg.strokeRoundedRect(-panelWidth / 2, -60, panelWidth, 120, 8);
+    bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 6);
     this.suspectPanel.add(bg);
 
-    // Suspect portrait placeholder (pixel art style)
+    // Portrait
+    const portraitSize = mobile ? 55 : 65;
     const portrait = this.add.graphics();
     portrait.fillStyle(0x394867, 1);
-    portrait.fillRect(-panelWidth / 2 + 15, -45, 70, 90);
+    portrait.fillRect(-panelWidth / 2 + 10, -portraitSize / 2 + 5, portraitSize, portraitSize);
     portrait.lineStyle(2, 0x5c6b8a, 1);
-    portrait.strokeRect(-panelWidth / 2 + 15, -45, 70, 90);
-    // Simple face
+    portrait.strokeRect(-panelWidth / 2 + 10, -portraitSize / 2 + 5, portraitSize, portraitSize);
     portrait.fillStyle(0xdddddd, 1);
-    portrait.fillCircle(-panelWidth / 2 + 50, -15, 20); // head
+    portrait.fillCircle(-panelWidth / 2 + 10 + portraitSize / 2, 0, portraitSize / 4);
     portrait.fillStyle(0x333333, 1);
-    portrait.fillCircle(-panelWidth / 2 + 43, -20, 3); // left eye
-    portrait.fillCircle(-panelWidth / 2 + 57, -20, 3); // right eye
+    portrait.fillCircle(-panelWidth / 2 + 10 + portraitSize / 2 - 5, -3, 2);
+    portrait.fillCircle(-panelWidth / 2 + 10 + portraitSize / 2 + 5, -3, 2);
     this.suspectPanel.add(portrait);
 
-    // Suspect name
-    const nameText = this.add
-      .text(-panelWidth / 2 + 100, -45, suspect.name, {
-        fontFamily: 'Courier New',
-        fontSize: '20px',
-        color: '#ffffff',
-      });
-    this.suspectPanel.add(nameText);
+    const textX = -panelWidth / 2 + portraitSize + 22;
+
+    // Name
+    this.suspectPanel.add(this.add.text(textX, -panelHeight / 2 + 12, suspect.name, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(16)}px`, color: '#ffffff',
+    }));
 
     // Description
-    const descText = this.add
-      .text(-panelWidth / 2 + 100, -20, suspect.description, {
-        fontFamily: 'Courier New',
-        fontSize: '12px',
-        color: '#888888',
-        wordWrap: { width: panelWidth - 140 },
-      });
-    this.suspectPanel.add(descText);
+    this.suspectPanel.add(this.add.text(textX, -panelHeight / 2 + 35, suspect.description, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#888888',
+      wordWrap: { width: panelWidth - portraitSize - 40 },
+    }));
 
     // Alibi
-    const alibiLabel = this.add
-      .text(-panelWidth / 2 + 100, 15, 'ALIBI:', {
-        fontFamily: 'Courier New',
-        fontSize: '11px',
-        color: '#ff4444',
-      });
-    this.suspectPanel.add(alibiLabel);
+    this.suspectPanel.add(this.add.text(textX, panelHeight / 2 - 42, 'ALIBI:', {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#ff4444',
+    }));
+    this.suspectPanel.add(this.add.text(textX + (mobile ? 55 : 50), panelHeight / 2 - 42, suspect.alibi, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#cccccc',
+      wordWrap: { width: panelWidth - portraitSize - 100 },
+    }));
 
-    const alibiText = this.add
-      .text(-panelWidth / 2 + 150, 15, suspect.alibi, {
-        fontFamily: 'Courier New',
-        fontSize: '11px',
-        color: '#cccccc',
-        wordWrap: { width: panelWidth - 180 },
-      });
-    this.suspectPanel.add(alibiText);
-
-    // Suspect navigation
+    // Navigation
+    const navY = panelHeight / 2 - 15;
     const prevBtn = this.add
-      .text(-panelWidth / 2 + 20, 50, '< PREV', {
-        fontFamily: 'Courier New',
-        fontSize: '12px',
+      .text(-panelWidth / 2 + 10, navY, '<', {
+        fontFamily: 'Courier New', fontSize: `${this.getFontSize(20)}px`,
         color: index > 0 ? '#00ff00' : '#333333',
       })
       .setInteractive({ useHandCursor: index > 0 })
-      .on('pointerdown', () => {
-        if (index > 0) this.showSuspect(index - 1);
-      });
+      .on('pointerdown', () => { if (index > 0) this.showSuspect(index - 1); });
     this.suspectPanel.add(prevBtn);
 
-    const suspectCounter = this.add
-      .text(0, 50, `${index + 1} / ${suspects.length}`, {
-        fontFamily: 'Courier New',
-        fontSize: '12px',
-        color: '#666666',
-      })
-      .setOrigin(0.5);
-    this.suspectPanel.add(suspectCounter);
+    this.suspectPanel.add(this.add.text(0, navY, `${index + 1}/${suspects.length}`, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#666666',
+    }).setOrigin(0.5));
 
     const nextBtn = this.add
-      .text(panelWidth / 2 - 20, 50, 'NEXT >', {
-        fontFamily: 'Courier New',
-        fontSize: '12px',
+      .text(panelWidth / 2 - 10, navY, '>', {
+        fontFamily: 'Courier New', fontSize: `${this.getFontSize(20)}px`,
         color: index < suspects.length - 1 ? '#00ff00' : '#333333',
       })
       .setOrigin(1, 0)
       .setInteractive({ useHandCursor: index < suspects.length - 1 })
-      .on('pointerdown', () => {
-        if (index < suspects.length - 1) this.showSuspect(index + 1);
-      });
+      .on('pointerdown', () => { if (index < suspects.length - 1) this.showSuspect(index + 1); });
     this.suspectPanel.add(nextBtn);
 
-    // Reset dialogue to initial options
     this.currentDialogueOptions = suspect.dialogueOptions.filter(
       (opt) => !opt.id.includes('_2') && !opt.id.includes('_3') && !opt.id.includes('_4')
     );
@@ -286,58 +226,48 @@ export class Interrogation extends Scene {
   }
 
   private createDialoguePanel(width: number, height: number): void {
-    this.dialogueContainer = this.add.container(width / 2, height / 2 + 80);
+    const mobile = this.isMobile();
+    this.dialogueContainer = this.add.container(width / 2, mobile ? height / 2 + 65 : height / 2 + 70);
   }
 
   private showDialogueOptions(): void {
     if (!this.dialogueContainer || !this.currentSuspect) return;
 
     const { width, height } = this.scale;
-    const panelWidth = width - 60;
+    const mobile = this.isMobile();
+    const panelWidth = width - (mobile ? 16 : 60);
+    const panelHeight = height - (mobile ? 230 : 280);
 
-    // Clear existing options
     this.dialogueContainer.removeAll(true);
 
-    // Background
     const bg = this.add.graphics();
     bg.fillStyle(0x16213e, 0.9);
-    bg.fillRoundedRect(-panelWidth / 2, -100, panelWidth, height - 340, 8);
+    bg.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 6);
     bg.lineStyle(1, 0x394867, 1);
-    bg.strokeRoundedRect(-panelWidth / 2, -100, panelWidth, height - 340, 8);
+    bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 6);
     this.dialogueContainer.add(bg);
 
-    // Title
-    const title = this.add
-      .text(0, -80, 'What would you like to ask?', {
-        fontFamily: 'Courier New',
-        fontSize: '14px',
-        color: '#ffd700',
-      })
-      .setOrigin(0.5);
-    this.dialogueContainer.add(title);
+    this.dialogueContainer.add(this.add.text(0, -panelHeight / 2 + 12, 'What to ask?', {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#ffd700',
+    }).setOrigin(0.5));
 
-    // Dialogue options
-    let yOffset = -50;
-    const options =
-      this.currentDialogueOptions.length > 0
-        ? this.currentDialogueOptions
-        : this.currentSuspect.dialogueOptions.slice(0, 3);
+    let yOffset = -panelHeight / 2 + 45;
+    const options = this.currentDialogueOptions.length > 0
+      ? this.currentDialogueOptions
+      : this.currentSuspect.dialogueOptions.slice(0, 3);
 
-    options.forEach((option, index) => {
+    options.forEach((option, idx) => {
       const optionText = this.add
-        .text(-panelWidth / 2 + 20, yOffset, `${index + 1}. ${option.text}`, {
-          fontFamily: 'Courier New',
-          fontSize: '13px',
-          color: '#00ccff',
-          wordWrap: { width: panelWidth - 40 },
+        .text(-panelWidth / 2 + 15, yOffset, `${idx + 1}. ${option.text}`, {
+          fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#00ccff',
+          wordWrap: { width: panelWidth - 30 },
         })
         .setInteractive({ useHandCursor: true })
         .on('pointerover', () => optionText.setColor('#ffffff'))
         .on('pointerout', () => optionText.setColor('#00ccff'))
         .on('pointerdown', () => this.selectDialogue(option));
-
       this.dialogueContainer!.add(optionText);
-      yOffset += 35;
+      yOffset += mobile ? 40 : 45;
     });
   }
 
@@ -345,89 +275,62 @@ export class Interrogation extends Scene {
     if (!this.dialogueContainer || !this.currentSuspect) return;
 
     const { width, height } = this.scale;
-    const panelWidth = width - 60;
+    const mobile = this.isMobile();
+    const panelWidth = width - (mobile ? 16 : 60);
+    const panelHeight = height - (mobile ? 230 : 280);
 
-    // Clear options
     this.dialogueContainer.removeAll(true);
 
-    // Background
     const bg = this.add.graphics();
     bg.fillStyle(0x16213e, 0.9);
-    bg.fillRoundedRect(-panelWidth / 2, -100, panelWidth, height - 340, 8);
+    bg.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 6);
     bg.lineStyle(1, option.isSuspicious ? 0xff4444 : 0x394867, 1);
-    bg.strokeRoundedRect(-panelWidth / 2, -100, panelWidth, height - 340, 8);
+    bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 6);
     this.dialogueContainer.add(bg);
 
     // Your question
-    const questionLabel = this.add
-      .text(-panelWidth / 2 + 20, -80, 'YOU:', {
-        fontFamily: 'Courier New',
-        fontSize: '12px',
-        color: '#00ff00',
-      });
-    this.dialogueContainer.add(questionLabel);
+    this.dialogueContainer.add(this.add.text(-panelWidth / 2 + 12, -panelHeight / 2 + 15, 'YOU:', {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#00ff00',
+    }));
 
-    const questionText = this.add
-      .text(-panelWidth / 2 + 20, -60, `"${option.text}"`, {
-        fontFamily: 'Courier New',
-        fontSize: '13px',
-        color: '#ffffff',
-        fontStyle: 'italic',
-        wordWrap: { width: panelWidth - 40 },
-      });
-    this.dialogueContainer.add(questionText);
+    this.dialogueContainer.add(this.add.text(-panelWidth / 2 + 12, -panelHeight / 2 + 32, `"${option.text}"`, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(13)}px`, color: '#ffffff',
+      fontStyle: 'italic', wordWrap: { width: panelWidth - 24 },
+    }));
 
-    // Suspect response
-    const responseLabel = this.add
-      .text(-panelWidth / 2 + 20, -20, `${this.currentSuspect.name}:`, {
-        fontFamily: 'Courier New',
-        fontSize: '12px',
-        color: option.isSuspicious ? '#ff4444' : '#ffff00',
-      });
-    this.dialogueContainer.add(responseLabel);
+    // Response
+    const responseY = -panelHeight / 2 + (mobile ? 70 : 85);
+    this.dialogueContainer.add(this.add.text(-panelWidth / 2 + 12, responseY, `${this.currentSuspect.name}:`, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`,
+      color: option.isSuspicious ? '#ff4444' : '#ffff00',
+    }));
 
-    const responseText = this.add
-      .text(-panelWidth / 2 + 20, 0, `"${option.response}"`, {
-        fontFamily: 'Courier New',
-        fontSize: '13px',
-        color: '#cccccc',
-        fontStyle: 'italic',
-        wordWrap: { width: panelWidth - 40 },
-      });
-    this.dialogueContainer.add(responseText);
+    this.dialogueContainer.add(this.add.text(-panelWidth / 2 + 12, responseY + 18, `"${option.response}"`, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(13)}px`, color: '#cccccc',
+      fontStyle: 'italic', wordWrap: { width: panelWidth - 24 },
+    }));
 
-    // Suspicious indicator
     if (option.isSuspicious) {
-      const suspiciousText = this.add
-        .text(panelWidth / 2 - 30, -80, '⚠ SUSPICIOUS', {
-          fontFamily: 'Courier New',
-          fontSize: '11px',
-          color: '#ff4444',
-        })
-        .setOrigin(1, 0);
-      this.dialogueContainer.add(suspiciousText);
+      this.dialogueContainer.add(this.add.text(panelWidth / 2 - 15, -panelHeight / 2 + 15, 'SUSPICIOUS', {
+        fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#ff4444',
+      }).setOrigin(1, 0));
     }
 
-    // If this unlocks a clue
     if (option.unlocksClue) {
       await this.findClue(option.unlocksClue);
     }
 
     // Continue button
     const continueBtn = this.add
-      .text(0, height - 380, '[ CONTINUE INTERROGATION ]', {
-        fontFamily: 'Courier New',
-        fontSize: '14px',
-        color: '#00ff00',
-        backgroundColor: '#1a1a2e',
-        padding: { x: 15, y: 8 },
+      .text(0, panelHeight / 2 - 25, '[CONTINUE]', {
+        fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#00ff00',
+        backgroundColor: '#1a1a2e', padding: { x: 14, y: 8 },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => continueBtn.setColor('#00ffff'))
       .on('pointerout', () => continueBtn.setColor('#00ff00'))
       .on('pointerdown', () => {
-        // Update available options based on nextOptions
         if (option.nextOptions && this.currentSuspect) {
           this.currentDialogueOptions = this.currentSuspect.dialogueOptions.filter((opt) =>
             option.nextOptions!.includes(opt.id)
@@ -442,39 +345,28 @@ export class Interrogation extends Scene {
 
   private async findClue(clueId: string): Promise<void> {
     if (this.progress?.cluesFound.includes(clueId)) return;
-
     try {
       const response = await fetch('/api/game/find-clue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clueId }),
       });
-
       if (!response.ok) throw new Error(`API error: ${response.status}`);
-
       const data = (await response.json()) as FindClueResponse;
       this.progress = data.progress;
-
-      // Show clue notification
       this.showClueNotification(data.clue.name);
     } catch (error) {
       console.error('Failed to find clue:', error);
-      if (this.progress) {
-        this.progress.cluesFound.push(clueId);
-      }
+      if (this.progress) this.progress.cluesFound.push(clueId);
     }
   }
 
   private showClueNotification(clueName: string): void {
     const { width } = this.scale;
-
     const notification = this.add
-      .text(width / 2, 60, `🔍 NEW CLUE: ${clueName}`, {
-        fontFamily: 'Courier New',
-        fontSize: '14px',
-        color: '#ffd700',
-        backgroundColor: '#1a1a2e',
-        padding: { x: 15, y: 8 },
+      .text(width / 2, this.isMobile() ? 38 : 50, `NEW CLUE: ${clueName}`, {
+        fontFamily: 'Courier New', fontSize: `${this.getFontSize(13)}px`, color: '#ffd700',
+        backgroundColor: '#1a1a2e', padding: { x: 12, y: 6 },
       })
       .setOrigin(0.5)
       .setAlpha(0);
@@ -490,14 +382,15 @@ export class Interrogation extends Scene {
   }
 
   private createNavigationButtons(width: number, height: number): void {
-    // Back to crime scene
+    const mobile = this.isMobile();
+    const btnY = height - (mobile ? 18 : 22);
+    const fontSize = this.getFontSize(14);
+    const padding = mobile ? { x: 10, y: 6 } : { x: 12, y: 8 };
+
     const backBtn = this.add
-      .text(width / 2 - 120, height - 25, '[ CRIME SCENE ]', {
-        fontFamily: 'Courier New',
-        fontSize: '13px',
-        color: '#888888',
-        backgroundColor: '#1a1a2e',
-        padding: { x: 12, y: 6 },
+      .text(width / 2 - (mobile ? 70 : 110), btnY, '[SCENE]', {
+        fontFamily: 'Courier New', fontSize: `${fontSize}px`, color: '#888888',
+        backgroundColor: '#1a1a2e', padding,
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
@@ -505,14 +398,10 @@ export class Interrogation extends Scene {
       .on('pointerout', () => backBtn.setColor('#888888'))
       .on('pointerdown', () => this.scene.start('CrimeScene'));
 
-    // Accuse button
     const accuseBtn = this.add
-      .text(width / 2 + 120, height - 25, '[ MAKE ACCUSATION ]', {
-        fontFamily: 'Courier New',
-        fontSize: '13px',
-        color: '#ff4444',
-        backgroundColor: '#1a1a2e',
-        padding: { x: 12, y: 6 },
+      .text(width / 2 + (mobile ? 70 : 110), btnY, '[ACCUSE]', {
+        fontFamily: 'Courier New', fontSize: `${fontSize}px`, color: '#ff4444',
+        backgroundColor: '#1a1a2e', padding,
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })

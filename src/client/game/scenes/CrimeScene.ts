@@ -51,6 +51,7 @@ export class CrimeScene extends Scene {
         color: '#ff4444',
         stroke: '#000000',
         strokeThickness: 2,
+        resolution: 2,
       })
       .setOrigin(0.5);
 
@@ -60,6 +61,7 @@ export class CrimeScene extends Scene {
         fontFamily: 'Courier New',
         fontSize: `${this.getFontSize(11)}px`,
         color: '#888888',
+        resolution: 2,
       })
       .setOrigin(0.5);
 
@@ -169,6 +171,7 @@ export class CrimeScene extends Scene {
       fontFamily: 'Courier New',
       fontSize: `${this.getFontSize(9)}px`,
       color: '#444444',
+      resolution: 2,
     });
   }
 
@@ -218,6 +221,7 @@ export class CrimeScene extends Scene {
         color: '#ffffff',
         stroke: '#000000',
         strokeThickness: 2,
+        resolution: 2,
       })
       .setOrigin(0.5);
     container.add(label);
@@ -229,6 +233,7 @@ export class CrimeScene extends Scene {
           fontFamily: 'Arial',
           fontSize: `${this.getFontSize(12)}px`,
           color: isFound ? '#00ff00' : '#ffff00',
+          resolution: 2,
         })
         .setOrigin(0.5);
       container.add(indicator);
@@ -300,19 +305,23 @@ export class CrimeScene extends Scene {
 
     notification.add(this.add.text(0, -45, 'CLUE FOUND!', {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(16)}px`, color: '#ffd700',
+      resolution: 2,
     }).setOrigin(0.5));
 
     notification.add(this.add.text(0, -20, clue.name, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(13)}px`, color: '#ffffff',
+      resolution: 2,
     }).setOrigin(0.5));
 
     notification.add(this.add.text(0, 15, clue.description, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(9)}px`, color: '#aaaaaa',
       wordWrap: { width: panelW - 30 }, align: 'center',
+      resolution: 2,
     }).setOrigin(0.5));
 
     const closeBtn = this.add.text(0, 50, '[TAP TO CLOSE]', {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#888888',
+      resolution: 2,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => notification.destroy());
     notification.add(closeBtn);
 
@@ -335,6 +344,7 @@ export class CrimeScene extends Scene {
 
     const placeholder = this.add.text(0, 0, 'Tap objects to examine...', {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#666666', align: 'center',
+      resolution: 2,
     }).setOrigin(0.5);
     this.infoPanel.add(placeholder);
   }
@@ -356,11 +366,13 @@ export class CrimeScene extends Scene {
 
     this.infoPanel.add(this.add.text(0, mobile ? -18 : -25, title.toUpperCase(), {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ff4444',
+      resolution: 2,
     }).setOrigin(0.5));
 
     this.infoPanel.add(this.add.text(0, mobile ? 8 : 10, description, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(9)}px`, color: '#cccccc',
       wordWrap: { width: width - 40 }, align: 'center',
+      resolution: 2,
     }).setOrigin(0.5));
   }
 
@@ -380,12 +392,14 @@ export class CrimeScene extends Scene {
 
     this.cluePanel.add(this.add.text(0, mobile ? -10 : -12, 'CLUES', {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(8)}px`, color: '#ffd700',
+      resolution: 2,
     }).setOrigin(0.5));
 
     const totalClues = this.currentCase?.clues.length || 0;
     const foundClues = this.progress?.cluesFound.length || 0;
     this.foundCluesText = this.add.text(0, mobile ? 8 : 10, `${foundClues}/${totalClues}`, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#ffffff',
+      resolution: 2,
     }).setOrigin(0.5);
     this.cluePanel.add(this.foundCluesText);
   }
@@ -407,6 +421,7 @@ export class CrimeScene extends Scene {
       .text(width / 2 - (mobile ? 55 : 90), btnY, mobile ? '[INTERROGATE]' : '[ INTERROGATE ]', {
         fontFamily: 'Courier New', fontSize: `${btnFontSize}px`, color: '#00ff00',
         backgroundColor: '#1a1a2e', padding: btnPadding,
+        resolution: 2,
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
@@ -418,6 +433,7 @@ export class CrimeScene extends Scene {
       .text(width / 2 + (mobile ? 55 : 90), btnY, mobile ? '[ACCUSE]' : '[ ACCUSE ]', {
         fontFamily: 'Courier New', fontSize: `${btnFontSize}px`, color: '#ff4444',
         backgroundColor: '#1a1a2e', padding: btnPadding,
+        resolution: 2,
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })

@@ -37,11 +37,13 @@ export class Accusation extends Scene {
     this.add.text(width / 2, mobile ? 18 : 28, 'ACCUSATION', {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(18)}px`,
       color: '#ff4444', stroke: '#000000', strokeThickness: 2,
+      resolution: 2,
     }).setOrigin(0.5);
 
     // Warning
     this.add.text(width / 2, mobile ? 38 : 55, 'One chance only!', {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#ffff00',
+      resolution: 2,
     }).setOrigin(0.5);
 
     await this.loadGameData();
@@ -138,11 +140,13 @@ export class Accusation extends Scene {
 
     container.add(this.add.text(textX, 10, suspect.name, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ffffff',
+      resolution: 2,
     }));
 
     container.add(this.add.text(textX, mobile ? 28 : 32, suspect.description, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(8)}px`, color: '#888888',
       wordWrap: { width: cardWidth - portraitSize - (mobile ? 80 : 100) },
+      resolution: 2,
     }));
 
     // Accuse button
@@ -150,6 +154,7 @@ export class Accusation extends Scene {
       .text(cardWidth / 2 - 12, cardHeight / 2, 'ACCUSE', {
         fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#ff4444',
         backgroundColor: '#2a1a1a', padding: { x: 8, y: 5 },
+        resolution: 2,
       })
       .setOrigin(1, 0.5)
       .setInteractive({ useHandCursor: true })
@@ -194,6 +199,7 @@ export class Accusation extends Scene {
 
     container.add(this.add.text(0, 12, `EVIDENCE: ${this.progress.cluesFound.length}/${this.currentCase.clues.length}`, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#ffd700',
+      resolution: 2,
     }).setOrigin(0.5));
 
     const foundClues = this.currentCase.clues.filter((c) => this.progress!.cluesFound.includes(c.id));
@@ -204,6 +210,7 @@ export class Accusation extends Scene {
     container.add(this.add.text(-panelWidth / 2 + 12, 28, clueText, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(8)}px`, color: '#aaaaaa',
       wordWrap: { width: panelWidth - 24 },
+      resolution: 2,
     }));
   }
 
@@ -240,14 +247,17 @@ export class Accusation extends Scene {
 
     this.confirmPanel.add(this.add.text(0, -panelHeight / 2 + 20, 'CONFIRM', {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#ff4444',
+      resolution: 2,
     }).setOrigin(0.5));
 
     this.confirmPanel.add(this.add.text(0, -10, `Accuse ${suspect.name}?`, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ffffff',
+      resolution: 2,
     }).setOrigin(0.5));
 
     this.confirmPanel.add(this.add.text(0, 15, 'Cannot be undone!', {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(9)}px`, color: '#ffff00',
+      resolution: 2,
     }).setOrigin(0.5));
 
     const btnY = panelHeight / 2 - 30;
@@ -255,6 +265,7 @@ export class Accusation extends Scene {
       .text(-50, btnY, '[YES]', {
         fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ff4444',
         backgroundColor: '#2a1a1a', padding: { x: 10, y: 6 },
+        resolution: 2,
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
@@ -267,6 +278,7 @@ export class Accusation extends Scene {
       .text(50, btnY, '[NO]', {
         fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#888888',
         backgroundColor: '#1a1a1a', padding: { x: 10, y: 6 },
+        resolution: 2,
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
@@ -330,6 +342,7 @@ export class Accusation extends Scene {
     this.resultPanel.add(this.add.text(0, -panelHeight / 2 + 35, titleText, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(24)}px`,
       color: titleColor, stroke: '#000000', strokeThickness: 3,
+      resolution: 2,
     }).setOrigin(0.5));
 
     let explanation = '';
@@ -342,12 +355,14 @@ export class Accusation extends Scene {
     this.resultPanel.add(this.add.text(0, 10, explanation, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#cccccc',
       align: 'center', wordWrap: { width: panelWidth - 40 }, lineSpacing: 4,
+      resolution: 2,
     }).setOrigin(0.5));
 
     const playAgainBtn = this.add
       .text(0, panelHeight / 2 - 35, '[MENU]', {
         fontFamily: 'Courier New', fontSize: `${this.getFontSize(13)}px`, color: '#ffffff',
         backgroundColor: '#333333', padding: { x: 15, y: 8 },
+        resolution: 2,
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
@@ -363,6 +378,7 @@ export class Accusation extends Scene {
       .text(mobile ? 15 : 25, height - (mobile ? 15 : 22), '[BACK]', {
         fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#888888',
         backgroundColor: '#1a1a2e', padding: { x: 8, y: 4 },
+        resolution: 2,
       })
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => backBtn.setColor('#ffffff'))

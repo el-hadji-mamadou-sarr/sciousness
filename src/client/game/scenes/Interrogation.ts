@@ -130,7 +130,7 @@ export class Interrogation extends Scene {
 
   private createSuspectPanel(width: number, _height: number): void {
     const mobile = this.isMobile();
-    this.suspectPanel = this.add.container(width / 2, mobile ? 100 : 130);
+    this.suspectPanel = this.add.container(width / 2, mobile ? 115 : 130);
   }
 
   private showSuspect(index: number): void {
@@ -148,7 +148,7 @@ export class Interrogation extends Scene {
     const { width } = this.scale;
     const mobile = this.isMobile();
     const panelWidth = width - (mobile ? 16 : 60);
-    const panelHeight = mobile ? 120 : 120;
+    const panelHeight = mobile ? 150 : 130;
 
     // Background
     const bg = this.add.graphics();
@@ -159,43 +159,43 @@ export class Interrogation extends Scene {
     this.suspectPanel.add(bg);
 
     // Portrait
-    const portraitSize = mobile ? 55 : 65;
+    const portraitSize = mobile ? 50 : 65;
     const portrait = this.add.graphics();
     portrait.fillStyle(0x394867, 1);
-    portrait.fillRect(-panelWidth / 2 + 10, -portraitSize / 2 + 5, portraitSize, portraitSize);
+    portrait.fillRect(-panelWidth / 2 + 10, -panelHeight / 2 + 10, portraitSize, portraitSize);
     portrait.lineStyle(2, 0x5c6b8a, 1);
-    portrait.strokeRect(-panelWidth / 2 + 10, -portraitSize / 2 + 5, portraitSize, portraitSize);
+    portrait.strokeRect(-panelWidth / 2 + 10, -panelHeight / 2 + 10, portraitSize, portraitSize);
     portrait.fillStyle(0xdddddd, 1);
-    portrait.fillCircle(-panelWidth / 2 + 10 + portraitSize / 2, 0, portraitSize / 4);
+    portrait.fillCircle(-panelWidth / 2 + 10 + portraitSize / 2, -panelHeight / 2 + 10 + portraitSize / 2 + 5, portraitSize / 4);
     portrait.fillStyle(0x333333, 1);
-    portrait.fillCircle(-panelWidth / 2 + 10 + portraitSize / 2 - 5, -3, 2);
-    portrait.fillCircle(-panelWidth / 2 + 10 + portraitSize / 2 + 5, -3, 2);
+    portrait.fillCircle(-panelWidth / 2 + 10 + portraitSize / 2 - 5, -panelHeight / 2 + 10 + portraitSize / 2 + 2, 2);
+    portrait.fillCircle(-panelWidth / 2 + 10 + portraitSize / 2 + 5, -panelHeight / 2 + 10 + portraitSize / 2 + 2, 2);
     this.suspectPanel.add(portrait);
 
-    const textX = -panelWidth / 2 + portraitSize + 22;
+    const textX = -panelWidth / 2 + portraitSize + 25;
 
     // Name
     this.suspectPanel.add(this.add.text(textX, -panelHeight / 2 + 12, suspect.name, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(16)}px`, color: '#ffffff',
     }));
 
-    // Description
-    this.suspectPanel.add(this.add.text(textX, -panelHeight / 2 + 35, suspect.description, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#888888',
+    // Description - positioned below name with more space
+    this.suspectPanel.add(this.add.text(textX, -panelHeight / 2 + 38, suspect.description, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#888888',
       wordWrap: { width: panelWidth - portraitSize - 40 },
     }));
 
-    // Alibi
-    this.suspectPanel.add(this.add.text(textX, panelHeight / 2 - 42, 'ALIBI:', {
+    // Alibi - positioned in lower section
+    this.suspectPanel.add(this.add.text(-panelWidth / 2 + 12, panelHeight / 2 - 50, 'ALIBI:', {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#ff4444',
     }));
-    this.suspectPanel.add(this.add.text(textX + (mobile ? 55 : 50), panelHeight / 2 - 42, suspect.alibi, {
+    this.suspectPanel.add(this.add.text(-panelWidth / 2 + 70, panelHeight / 2 - 50, suspect.alibi, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#cccccc',
-      wordWrap: { width: panelWidth - portraitSize - 100 },
+      wordWrap: { width: panelWidth - 90 },
     }));
 
     // Navigation
-    const navY = panelHeight / 2 - 15;
+    const navY = panelHeight / 2 - 18;
     const prevBtn = this.add
       .text(-panelWidth / 2 + 10, navY, '<', {
         fontFamily: 'Courier New', fontSize: `${this.getFontSize(20)}px`,
@@ -227,7 +227,7 @@ export class Interrogation extends Scene {
 
   private createDialoguePanel(width: number, height: number): void {
     const mobile = this.isMobile();
-    this.dialogueContainer = this.add.container(width / 2, mobile ? height / 2 + 65 : height / 2 + 70);
+    this.dialogueContainer = this.add.container(width / 2, mobile ? height / 2 + 80 : height / 2 + 70);
   }
 
   private showDialogueOptions(): void {
@@ -236,7 +236,7 @@ export class Interrogation extends Scene {
     const { width, height } = this.scale;
     const mobile = this.isMobile();
     const panelWidth = width - (mobile ? 16 : 60);
-    const panelHeight = height - (mobile ? 230 : 280);
+    const panelHeight = height - (mobile ? 270 : 280);
 
     this.dialogueContainer.removeAll(true);
 
@@ -251,7 +251,7 @@ export class Interrogation extends Scene {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#ffd700',
     }).setOrigin(0.5));
 
-    let yOffset = -panelHeight / 2 + 45;
+    let yOffset = -panelHeight / 2 + 40;
     const options = this.currentDialogueOptions.length > 0
       ? this.currentDialogueOptions
       : this.currentSuspect.dialogueOptions.slice(0, 3);
@@ -277,7 +277,7 @@ export class Interrogation extends Scene {
     const { width, height } = this.scale;
     const mobile = this.isMobile();
     const panelWidth = width - (mobile ? 16 : 60);
-    const panelHeight = height - (mobile ? 230 : 280);
+    const panelHeight = height - (mobile ? 270 : 280);
 
     this.dialogueContainer.removeAll(true);
 

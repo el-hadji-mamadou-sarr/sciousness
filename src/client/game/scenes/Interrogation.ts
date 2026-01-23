@@ -31,6 +31,7 @@ export class Interrogation extends Scene {
   private isMobile(): boolean {
     return this.scale.width < 500;
   }
+  
 
   async create() {
     const { width, height } = this.scale;
@@ -177,21 +178,25 @@ export class Interrogation extends Scene {
     // Name
     this.suspectPanel.add(this.add.text(textX, -panelHeight / 2 + 12, suspect.name, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(16)}px`, color: '#ffffff',
+      resolution: 2,
     }));
 
-    // Description - positioned below name with more space
+    // Description
     this.suspectPanel.add(this.add.text(textX, -panelHeight / 2 + 38, suspect.description, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#888888',
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#aaaaaa',
       wordWrap: { width: panelWidth - portraitSize - 40 },
+      resolution: 2,
     }));
 
     // Alibi - positioned in lower section
     this.suspectPanel.add(this.add.text(-panelWidth / 2 + 12, panelHeight / 2 - 50, 'ALIBI:', {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#ff4444',
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ff4444',
+      resolution: 2,
     }));
-    this.suspectPanel.add(this.add.text(-panelWidth / 2 + 70, panelHeight / 2 - 50, suspect.alibi, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#cccccc',
-      wordWrap: { width: panelWidth - 90 },
+    this.suspectPanel.add(this.add.text(-panelWidth / 2 + 75, panelHeight / 2 - 50, suspect.alibi, {
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#cccccc',
+      wordWrap: { width: panelWidth - 95 },
+      resolution: 2,
     }));
 
     // Navigation
@@ -207,6 +212,7 @@ export class Interrogation extends Scene {
 
     this.suspectPanel.add(this.add.text(0, navY, `${index + 1}/${suspects.length}`, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#666666',
+      resolution: 2,
     }).setOrigin(0.5));
 
     const nextBtn = this.add
@@ -249,6 +255,7 @@ export class Interrogation extends Scene {
 
     this.dialogueContainer.add(this.add.text(0, -panelHeight / 2 + 12, 'What to ask?', {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#ffd700',
+      resolution: 2,
     }).setOrigin(0.5));
 
     let yOffset = -panelHeight / 2 + 40;
@@ -261,6 +268,7 @@ export class Interrogation extends Scene {
         .text(-panelWidth / 2 + 15, yOffset, `${idx + 1}. ${option.text}`, {
           fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#00ccff',
           wordWrap: { width: panelWidth - 30 },
+          resolution: 2,
         })
         .setInteractive({ useHandCursor: true })
         .on('pointerover', () => optionText.setColor('#ffffff'))
@@ -291,11 +299,13 @@ export class Interrogation extends Scene {
     // Your question
     this.dialogueContainer.add(this.add.text(-panelWidth / 2 + 12, -panelHeight / 2 + 15, 'YOU:', {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#00ff00',
+      resolution: 2,
     }));
 
     this.dialogueContainer.add(this.add.text(-panelWidth / 2 + 12, -panelHeight / 2 + 32, `"${option.text}"`, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(13)}px`, color: '#ffffff',
       fontStyle: 'italic', wordWrap: { width: panelWidth - 24 },
+      resolution: 2,
     }));
 
     // Response
@@ -303,16 +313,19 @@ export class Interrogation extends Scene {
     this.dialogueContainer.add(this.add.text(-panelWidth / 2 + 12, responseY, `${this.currentSuspect.name}:`, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`,
       color: option.isSuspicious ? '#ff4444' : '#ffff00',
+      resolution: 2,
     }));
 
     this.dialogueContainer.add(this.add.text(-panelWidth / 2 + 12, responseY + 18, `"${option.response}"`, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(13)}px`, color: '#cccccc',
       fontStyle: 'italic', wordWrap: { width: panelWidth - 24 },
+      resolution: 2,
     }));
 
     if (option.isSuspicious) {
       this.dialogueContainer.add(this.add.text(panelWidth / 2 - 15, -panelHeight / 2 + 15, 'SUSPICIOUS', {
         fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#ff4444',
+        resolution: 2,
       }).setOrigin(1, 0));
     }
 

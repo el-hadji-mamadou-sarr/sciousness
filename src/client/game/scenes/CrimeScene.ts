@@ -620,7 +620,7 @@ export class CrimeScene extends Scene {
     if (!this.infoPanel) return;
     const { width } = this.scale;
     const mobile = this.isMobile();
-    const panelHeight = mobile ? 70 : 70;
+    const panelHeight = mobile ? 60 : 70;
 
     this.infoPanel.removeAll(true);
 
@@ -637,8 +637,8 @@ export class CrimeScene extends Scene {
     }).setOrigin(0.5));
 
     this.infoPanel.add(this.add.text(0, mobile ? 8 : 10, description, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#cccccc',
-      wordWrap: { width: width - 40 }, align: 'center',
+      fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#cccccc',
+      wordWrap: { width: width - 20 }, align: 'center',
       resolution: 2,
     }).setOrigin(0.5));
   }

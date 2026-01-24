@@ -80,8 +80,8 @@ export class Accusation extends Scene {
     const mobile = this.isMobile();
     const suspects = this.currentCase.suspects;
     const startY = mobile ? 65 : 90;
-    const cardHeight = mobile ? 70 : 90;
-    const cardSpacing = mobile ? 8 : 15;
+    const cardHeight = mobile ? 90 : 110;
+    const cardSpacing = mobile ? 10 : 15;
 
     suspects.forEach((suspect, index) => {
       const y = startY + index * (cardHeight + cardSpacing);
@@ -104,7 +104,7 @@ export class Accusation extends Scene {
     bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
     container.add(bg);
 
-    const portraitSize = mobile ? 40 : 55;
+    const portraitSize = mobile ? 55 : 70;
     const portrait = this.add.graphics();
     const portraitX = -cardWidth / 2 + 8 + portraitSize / 2;
     const portraitY = 8 + portraitSize / 2;
@@ -114,17 +114,16 @@ export class Accusation extends Scene {
     const textX = -cardWidth / 2 + portraitSize + 18;
 
     container.add(createNoirText(this, textX, 12, suspect.name.toUpperCase(), {
-      size: 'small',
+      size: 'medium',
       color: 'white',
       origin: { x: 0, y: 0 },
     }));
 
-    container.add(createNoirText(this, textX, mobile ? 32 : 38, suspect.description.toUpperCase(), {
+    container.add(createNoirText(this, textX, mobile ? 35 : 42, suspect.description.toUpperCase(), {
       size: 'small',
       color: 'gray',
       origin: { x: 0, y: 0 },
       maxWidth: cardWidth - portraitSize - (mobile ? 90 : 110),
-      scale: 0.6,
     }));
 
     // Accuse button

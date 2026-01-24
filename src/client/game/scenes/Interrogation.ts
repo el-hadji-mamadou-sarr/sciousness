@@ -126,11 +126,10 @@ export class Interrogation extends Scene {
       color: 'gray',
       origin: { x: 0, y: 0 },
       maxWidth: panelWidth - portraitSize - 40,
-      scale: 0.7,
     }));
 
     this.suspectPanel.add(createNoirText(this, -panelWidth / 2 + 12, panelHeight / 2 - 50, 'ALIBI:', {
-      size: 'small',
+      size: 'medium',
       color: 'red',
       origin: { x: 0, y: 0 },
     }));
@@ -140,36 +139,35 @@ export class Interrogation extends Scene {
       color: 'lightGray',
       origin: { x: 0, y: 0 },
       maxWidth: panelWidth - 95,
-      scale: 0.7,
     }));
 
-    const navY = panelHeight / 2 - 18;
+    const navY = panelHeight / 2 - 22;
 
     if (index > 0) {
-      const prevBtn = createNoirText(this, -panelWidth / 2 + 10, navY, '<', {
-        size: 'medium',
+      const prevBtn = createNoirButton(this, -panelWidth / 2 + 30, navY, '<', {
+        size: 'large',
         color: 'green',
-        origin: { x: 0, y: 0 },
+        hoverColor: 'cyan',
+        onClick: () => this.showSuspect(index - 1),
+        padding: { x: 12, y: 6 },
       });
-      prevBtn.setInteractive({ useHandCursor: true });
-      prevBtn.on('pointerdown', () => this.showSuspect(index - 1));
       this.suspectPanel.add(prevBtn);
     }
 
     this.suspectPanel.add(createNoirText(this, 0, navY, `${index + 1}/${suspects.length}`, {
-      size: 'small',
+      size: 'medium',
       color: 'gray',
-      origin: { x: 0.5, y: 0 },
+      origin: { x: 0.5, y: 0.5 },
     }));
 
     if (index < suspects.length - 1) {
-      const nextBtn = createNoirText(this, panelWidth / 2 - 20, navY, '>', {
-        size: 'medium',
+      const nextBtn = createNoirButton(this, panelWidth / 2 - 30, navY, '>', {
+        size: 'large',
         color: 'green',
-        origin: { x: 0, y: 0 },
+        hoverColor: 'cyan',
+        onClick: () => this.showSuspect(index + 1),
+        padding: { x: 12, y: 6 },
       });
-      nextBtn.setInteractive({ useHandCursor: true });
-      nextBtn.on('pointerdown', () => this.showSuspect(index + 1));
       this.suspectPanel.add(nextBtn);
     }
 

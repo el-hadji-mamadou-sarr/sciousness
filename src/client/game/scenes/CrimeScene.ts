@@ -77,7 +77,7 @@ export class CrimeScene extends Scene {
 
     const mobile = this.isMobile();
     const headerHeight = mobile ? 45 : 60;
-    const footerHeight = mobile ? 100 : 130;
+    const footerHeight = mobile ? 140 : 170;
     const boardY = headerHeight;
     const visibleBoardHeight = height - headerHeight - footerHeight;
     const minBoardHeight = mobile ? 500 : visibleBoardHeight;
@@ -328,7 +328,7 @@ export class CrimeScene extends Scene {
       size: 'small',
       color: item.type === 'photo' ? 'gray' : 'darkGray',
       origin: { x: 0.5, y: 0.5 },
-      scale: 0.5,
+      scale: 0.8,
       maxWidth: w - 4,
     });
     container.add(label);
@@ -541,8 +541,8 @@ export class CrimeScene extends Scene {
 
   private createInfoPanel(width: number, height: number): void {
     const mobile = this.isMobile();
-    const panelHeight = mobile ? 55 : 70;
-    const panelY = height - (mobile ? 90 : 110);
+    const panelHeight = mobile ? 85 : 105;
+    const panelY = height - (mobile ? 135 : 165);
 
     this.infoPanel = this.add.container(width / 2, panelY + panelHeight / 2);
 
@@ -554,7 +554,7 @@ export class CrimeScene extends Scene {
     this.infoPanel.add(bg);
 
     const placeholder = createNoirText(this, 0, 0, 'TAP EVIDENCE TO EXAMINE...', {
-      size: 'small',
+      size: 'medium',
       color: 'gray',
       origin: { x: 0.5, y: 0.5 },
     });
@@ -565,7 +565,7 @@ export class CrimeScene extends Scene {
     if (!this.infoPanel) return;
     const { width } = this.scale;
     const mobile = this.isMobile();
-    const panelHeight = mobile ? 60 : 70;
+    const panelHeight = mobile ? 85 : 105;
 
     this.infoPanel.removeAll(true);
 
@@ -576,19 +576,18 @@ export class CrimeScene extends Scene {
     bg.strokeRoundedRect(-width / 2 + 10, -panelHeight / 2, width - 20, panelHeight, 5);
     this.infoPanel.add(bg);
 
-    this.infoPanel.add(createNoirText(this, 0, mobile ? -15 : -18, title.toUpperCase(), {
-      size: 'small',
+    this.infoPanel.add(createNoirText(this, 0, mobile ? -18 : -22, title.toUpperCase(), {
+      size: 'medium',
       color: 'red',
       origin: { x: 0.5, y: 0.5 },
     }));
 
-    this.infoPanel.add(createNoirText(this, 0, mobile ? 10 : 12, description.toUpperCase(), {
+    this.infoPanel.add(createNoirText(this, 0, mobile ? 12 : 15, description.toUpperCase(), {
       size: 'small',
       color: 'lightGray',
       origin: { x: 0.5, y: 0.5 },
       maxWidth: width - 40,
       align: 1,
-      scale: 0.8,
     }));
   }
 

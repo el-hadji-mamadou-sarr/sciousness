@@ -164,7 +164,7 @@ export class Accusation extends Scene {
     }));
 
     const foundClues = this.currentCase.clues.filter((c) => this.progress!.cluesFound.includes(c.id));
-    let clueText = foundClues.length > 0
+    const clueText = foundClues.length > 0
       ? foundClues.map((c) => `- ${c.name.toUpperCase()}`).join(mobile ? ', ' : '\n')
       : 'NO CLUES YET!';
 

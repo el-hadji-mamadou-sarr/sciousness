@@ -1,4 +1,4 @@
-import { Scene, GameObjects } from 'phaser';
+import Phaser, { Scene, GameObjects } from 'phaser';
 import {
   Case,
   Clue,
@@ -358,7 +358,7 @@ export class CrimeScene extends Scene {
     });
 
     container.on('pointerdown', () => {
-      this.examineItem(item);
+      void this.examineItem(item);
     });
 
     this.boardContainer!.add(container);

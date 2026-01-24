@@ -1,4 +1,4 @@
-import { Scene, GameObjects } from 'phaser';
+import Phaser, { Scene, GameObjects } from 'phaser';
 
 interface LoadingData {
   targetScene: string;

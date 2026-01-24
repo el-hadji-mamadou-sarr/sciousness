@@ -4,7 +4,8 @@
       "Bash(npm run type-check:*)",
       "Bash(npm run build:*)",
       "Bash(del \"c:\\\\Users\\\\elhad\\\\Documents\\\\glame\\\\noir-cr\\\\src\\\\client\\\\game\\\\scenes\\\\crime-scenes\\\\case1.tsx\")",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint:*)"
     ]
   }
 }

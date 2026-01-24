@@ -1,4 +1,5 @@
-import { Scene, GameObjects } from 'phaser';
+import Phaser, { Scene, GameObjects } from 'phaser';
+import { loadBitmapFonts } from '../utils/BitmapFontLoader';
 
 export class Preloader extends Scene {
   private loadingText: GameObjects.Text | null = null;
@@ -137,6 +138,9 @@ export class Preloader extends Scene {
     if (this.dotTimer) {
       this.dotTimer.destroy();
     }
+
+    // Load bitmap fonts for crisp text rendering
+    loadBitmapFonts(this);
 
     // Brief delay to show completion, then fade to MainMenu
     this.time.delayedCall(300, () => {

@@ -7,7 +7,7 @@ const startButton = document.getElementById('start-button') as HTMLButtonElement
 const titleElement = document.getElementById('title') as HTMLHeadingElement;
 
 startButton.addEventListener('click', (e) => {
-  requestExpandedMode(e, 'game');
+  void requestExpandedMode(e, 'game');
 });
 
 docsLink.addEventListener('click', () => {

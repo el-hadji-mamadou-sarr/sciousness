@@ -1,29 +1,19 @@
 import * as Phaser from 'phaser';
+import { getSafeBitmapFontName } from './BitmapFontLoader';
 
 type FontSize = 'small' | 'medium' | 'large' | 'xlarge';
 type FontColor = 'white' | 'red' | 'gold' | 'green' | 'cyan' | 'gray' | 'darkGray' | 'lightGray';
 
-// Font family - JetBrains Mono for crisp rendering
-const FONT_FAMILY = '"JetBrains Mono", "Fira Code", "Source Code Pro", "Consolas", monospace';
-
-// Color mapping
-const COLORS: Record<FontColor, string> = {
-  white: '#FFFFFF',
-  red: '#FF4444',
-  gold: '#FFD700',
-  green: '#00FF00',
-  cyan: '#00FFFF',
-  gray: '#888888',
-  darkGray: '#666666',
-  lightGray: '#CCCCCC',
-};
-
-// Base font sizes - balanced for readability and fit
-const FONT_SIZES: Record<FontSize, number> = {
-  small: 14,
-  medium: 18,
-  large: 24,
-  xlarge: 32,
+// Map extended colors to bitmap font colors
+const BITMAP_COLOR_MAP: Record<FontColor, 'white' | 'red' | 'gold' | 'green' | 'cyan' | 'gray'> = {
+  white: 'white',
+  red: 'red',
+  gold: 'gold',
+  green: 'green',
+  cyan: 'cyan',
+  gray: 'gray',
+  darkGray: 'gray',
+  lightGray: 'white',
 };
 
 interface NoirTextConfig {
@@ -45,25 +35,7 @@ export function configureRendererForFonts(game: Phaser.Game): void {
 }
 
 /**
- * Get responsive font size based on screen width
- */
-function getResponsiveSize(scene: Phaser.Scene, baseSize: FontSize): number {
-  const screenWidth = scene.scale.width;
-  const basePx = FONT_SIZES[baseSize];
-
-  // Scale font based on screen width
-  if (screenWidth < 400) {
-    return Math.max(basePx * 0.85, 12);
-  }
-  if (screenWidth < 600) {
-    return Math.max(basePx * 0.95, 13);
-  }
-  return basePx;
-}
-
-/**
- * Creates crisp text optimized for the noir game style
- * Uses resolution: 2 for crisp rendering on all devices
+ * Creates crisp bitmap text optimized for the noir game style
  */
 export function createNoirText(
   scene: Phaser.Scene,
@@ -71,23 +43,24 @@ export function createNoirText(
   y: number,
   text: string,
   config: NoirTextConfig = {}
-): Phaser.GameObjects.Text {
+): Phaser.GameObjects.BitmapText {
   const size = config.size || 'medium';
   const color = config.color || 'white';
-  const fontSize = getResponsiveSize(scene, size);
+  const bitmapColor = BITMAP_COLOR_MAP[color];
 
-  const alignMap = ['left', 'center', 'right'] as const;
-  const textAlign = alignMap[config.align ?? 0] ?? 'left';
+  // Get safe bitmap font name (with fallback)
+  const fontName = getSafeBitmapFontName(scene, size, bitmapColor);
 
-  const textObj = scene.add.text(x, y, text.toUpperCase(), {
-    fontFamily: FONT_FAMILY,
-    fontSize: `${fontSize}px`,
-    fontStyle: 'bold',
-    color: COLORS[color],
-    align: textAlign,
-    resolution: 2, // Critical for crisp text on mobile
-    wordWrap: config.maxWidth ? { width: config.maxWidth } : undefined,
-  });
+  const textObj = scene.add.bitmapText(x, y, fontName, text.toUpperCase());
+
+  // Handle alignment via origin
+  if (config.align === 1) {
+    // Center
+    textObj.setOrigin(0.5, 0);
+  } else if (config.align === 2) {
+    // Right
+    textObj.setOrigin(1, 0);
+  }
 
   if (config.origin) {
     textObj.setOrigin(config.origin.x, config.origin.y);
@@ -95,6 +68,11 @@ export function createNoirText(
 
   if (config.scale) {
     textObj.setScale(config.scale);
+  }
+
+  // Handle max width with word wrap
+  if (config.maxWidth) {
+    textObj.setMaxWidth(config.maxWidth);
   }
 
   return textObj;
@@ -121,16 +99,16 @@ export function createNoirButton(
   const color = config.color || 'green';
   const hoverColor = config.hoverColor || 'cyan';
   const padding = config.padding || { x: 15, y: 8 };
-  const fontSize = getResponsiveSize(scene, size);
 
-  // Create text
-  const buttonText = scene.add.text(0, 0, text.toUpperCase(), {
-    fontFamily: FONT_FAMILY,
-    fontSize: `${fontSize}px`,
-    fontStyle: 'bold',
-    color: COLORS[color],
-    resolution: 2,
-  });
+  const bitmapColor = BITMAP_COLOR_MAP[color];
+  const bitmapHoverColor = BITMAP_COLOR_MAP[hoverColor];
+
+  // Get bitmap font names
+  const fontName = getSafeBitmapFontName(scene, size, bitmapColor);
+  const hoverFontName = getSafeBitmapFontName(scene, size, bitmapHoverColor);
+
+  // Create bitmap text
+  const buttonText = scene.add.bitmapText(0, 0, fontName, text.toUpperCase());
   buttonText.setOrigin(0.5);
 
   // Calculate button size
@@ -151,7 +129,7 @@ export function createNoirButton(
   container.setInteractive({ useHandCursor: true });
 
   container.on('pointerover', () => {
-    buttonText.setColor(COLORS[hoverColor]);
+    buttonText.setFont(hoverFontName);
     bg.clear();
     bg.fillStyle(0x2a2a4e, 1);
     bg.fillRoundedRect(-btnWidth / 2, -btnHeight / 2, btnWidth, btnHeight, 4);
@@ -160,7 +138,7 @@ export function createNoirButton(
   });
 
   container.on('pointerout', () => {
-    buttonText.setColor(COLORS[color]);
+    buttonText.setFont(fontName);
     bg.clear();
     bg.fillStyle(0x1a1a2e, 1);
     bg.fillRoundedRect(-btnWidth / 2, -btnHeight / 2, btnWidth, btnHeight, 4);

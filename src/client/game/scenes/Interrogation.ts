@@ -8,6 +8,7 @@ import {
   FindClueResponse,
 } from '../../../shared/types/game';
 import { case1 } from './crime-scenes/case1';
+import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
 
 export class Interrogation extends Scene {
   private currentCase: Case | null = null;
@@ -119,18 +120,12 @@ export class Interrogation extends Scene {
     bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 6);
     this.suspectPanel.add(bg);
 
-    // Portrait
+    // Portrait - using procedural graphics generator
     const portraitSize = mobile ? 50 : 65;
     const portrait = this.add.graphics();
-    portrait.fillStyle(0x394867, 1);
-    portrait.fillRect(-panelWidth / 2 + 10, -panelHeight / 2 + 10, portraitSize, portraitSize);
-    portrait.lineStyle(2, 0x5c6b8a, 1);
-    portrait.strokeRect(-panelWidth / 2 + 10, -panelHeight / 2 + 10, portraitSize, portraitSize);
-    portrait.fillStyle(0xdddddd, 1);
-    portrait.fillCircle(-panelWidth / 2 + 10 + portraitSize / 2, -panelHeight / 2 + 10 + portraitSize / 2 + 5, portraitSize / 4);
-    portrait.fillStyle(0x333333, 1);
-    portrait.fillCircle(-panelWidth / 2 + 10 + portraitSize / 2 - 5, -panelHeight / 2 + 10 + portraitSize / 2 + 2, 2);
-    portrait.fillCircle(-panelWidth / 2 + 10 + portraitSize / 2 + 5, -panelHeight / 2 + 10 + portraitSize / 2 + 2, 2);
+    const portraitX = -panelWidth / 2 + 10 + portraitSize / 2;
+    const portraitY = -panelHeight / 2 + 10 + portraitSize / 2;
+    drawSuspectPortrait(portrait, portraitX, portraitY, portraitSize, suspect.id, suspect.isGuilty);
     this.suspectPanel.add(portrait);
 
     const textX = -panelWidth / 2 + portraitSize + 25;

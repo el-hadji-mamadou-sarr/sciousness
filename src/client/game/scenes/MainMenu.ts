@@ -1,5 +1,9 @@
 import { Scene, GameObjects } from 'phaser';
 import { Case, PlayerProgress, InitGameResponse } from '../../../shared/types/game';
+import { context } from '@devvit/web/client';
+
+// Admin usernames that can play unlimited times for testing
+const ADMIN_USERNAMES = ['ashscars'];
 
 export class MainMenu extends Scene {
   private noirBg: GameObjects.Graphics | null = null;
@@ -63,7 +67,16 @@ export class MainMenu extends Scene {
     }
   }
 
+  private isAdmin(): boolean {
+    const username = context.username?.toLowerCase();
+    return username ? ADMIN_USERNAMES.includes(username) : false;
+  }
+
   private hasAlreadyPlayed(): boolean {
+    // Admins can always play for testing purposes
+    if (this.isAdmin()) {
+      return false;
+    }
     return this.progress?.solved === true;
   }
 

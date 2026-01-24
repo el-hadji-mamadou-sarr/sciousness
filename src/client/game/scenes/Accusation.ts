@@ -1,6 +1,7 @@
 import { Scene, GameObjects } from 'phaser';
 import { Case, Suspect, PlayerProgress, InitGameResponse, AccuseResponse } from '../../../shared/types/game';
 import { case1 } from './crime-scenes/case1';
+import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
 
 export class Accusation extends Scene {
   private currentCase: Case | null = null;
@@ -113,18 +114,12 @@ export class Accusation extends Scene {
     bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
     container.add(bg);
 
-    // Portrait
+    // Portrait - using procedural graphics generator
     const portraitSize = mobile ? 40 : 55;
     const portrait = this.add.graphics();
-    portrait.fillStyle(0x394867, 1);
-    portrait.fillRect(-cardWidth / 2 + 8, 8, portraitSize, portraitSize);
-    portrait.lineStyle(2, 0x5c6b8a, 1);
-    portrait.strokeRect(-cardWidth / 2 + 8, 8, portraitSize, portraitSize);
-    portrait.fillStyle(0xcccccc, 1);
-    portrait.fillCircle(-cardWidth / 2 + 8 + portraitSize / 2, 8 + portraitSize / 2 - 5, portraitSize / 4);
-    portrait.fillStyle(0x222222, 1);
-    portrait.fillCircle(-cardWidth / 2 + 8 + portraitSize / 2 - 4, 8 + portraitSize / 2 - 8, 2);
-    portrait.fillCircle(-cardWidth / 2 + 8 + portraitSize / 2 + 4, 8 + portraitSize / 2 - 8, 2);
+    const portraitX = -cardWidth / 2 + 8 + portraitSize / 2;
+    const portraitY = 8 + portraitSize / 2;
+    drawSuspectPortrait(portrait, portraitX, portraitY, portraitSize, suspect.id, suspect.isGuilty);
     container.add(portrait);
 
     const textX = -cardWidth / 2 + portraitSize + 18;

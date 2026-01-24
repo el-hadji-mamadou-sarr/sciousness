@@ -7,6 +7,7 @@ import {
   FindClueResponse,
 } from '../../../shared/types/game';
 import { case1 } from './crime-scenes/case1';
+import { drawCrimeSceneObject } from '../utils/ProceduralGraphics';
 
 // Evidence item positions on the crime board
 interface BoardItem {
@@ -295,33 +296,57 @@ export class CrimeScene extends Scene {
     const bg = this.add.graphics();
 
     if (item.type === 'photo') {
-      // Noir Photo
-      bg.fillStyle(0xe0e0e0, 1); // Off-white border
-      bg.fillRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 20);
+      // Noir Photo - Polaroid style
+      bg.fillStyle(0xe8e8e8, 1); // Off-white border
+      bg.fillRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 22);
 
-      // Photo area (black and white)
-      bg.fillStyle(item.id === 'victim' ? 0x000000 : 0x222222, 1);
+      // Photo area (dark)
+      bg.fillStyle(0x1a1a1a, 1);
       bg.fillRect(-w / 2, -h / 2, w, h);
 
-      // Silhouette
+      // Enhanced victim/scene drawing
       if (item.id === 'victim') {
-        bg.fillStyle(0x333333, 1); // Dark grey silhouette
-        bg.fillCircle(0, -h / 4, w / 4); // head
-        bg.fillRect(-w / 4, -h / 4 + w / 6, w / 2, h / 2); // body
+        // Use procedural victim outline
+        drawCrimeSceneObject(bg, -w / 2, -h / 2, w, h, 'victim');
+      } else {
+        // Other photos - draw scene hint based on label
+        const objectType = item.label.toLowerCase();
+        if (objectType.includes('desk')) {
+          drawCrimeSceneObject(bg, -w / 2 + 5, -h / 2 + 5, w - 10, h - 10, 'desk');
+        } else if (objectType.includes('computer') || objectType.includes('keyboard')) {
+          drawCrimeSceneObject(bg, -w / 2 + 5, -h / 2 + 5, w - 10, h - 10, 'computer');
+        } else if (objectType.includes('coffee') || objectType.includes('mug')) {
+          drawCrimeSceneObject(bg, -w / 2 + 5, -h / 2 + 5, w - 10, h - 10, 'mug');
+        } else if (objectType.includes('plant')) {
+          drawCrimeSceneObject(bg, -w / 2 + 5, -h / 2 + 5, w - 10, h - 10, 'plant');
+        } else if (objectType.includes('window')) {
+          drawCrimeSceneObject(bg, -w / 2 + 5, -h / 2 + 5, w - 10, h - 10, 'window');
+        } else if (objectType.includes('phone')) {
+          drawCrimeSceneObject(bg, -w / 2 + 5, -h / 2 + 5, w - 10, h - 10, 'phone');
+        } else {
+          // Default silhouette for unknown items
+          bg.fillStyle(0x333333, 1);
+          bg.fillCircle(0, -h / 4, w / 5);
+          bg.fillRect(-w / 5, -h / 4 + w / 8, w / 2.5, h / 3);
+        }
       }
 
-      // Red X if victim (keep red for contrast)
+      // Red X overlay if victim
       if (item.id === 'victim') {
-        bg.lineStyle(3, 0xff0000, 0.8);
+        bg.lineStyle(3, 0xff0000, 0.85);
         bg.lineBetween(-w / 3, -h / 3, w / 3, h / 3 - 10);
         bg.lineBetween(w / 3, -h / 3, -w / 3, h / 3 - 10);
       }
 
-      // Push pin
-      bg.fillStyle(0xff0000, 1);
-      bg.fillCircle(0, -h / 2 - 8, 5);
-      bg.fillStyle(0xaa0000, 1);
-      bg.fillCircle(-1, -h / 2 - 9, 2);
+      // Push pin with shine
+      bg.fillStyle(0xcc0000, 1);
+      bg.fillCircle(0, -h / 2 - 8, 6);
+      bg.fillStyle(0xff3333, 1);
+      bg.fillCircle(-2, -h / 2 - 10, 2);
+
+      // Photo date stamp
+      bg.fillStyle(0xff6600, 0.7);
+      bg.fillRect(w / 2 - 18, h / 2 - 8, 14, 6);
 
     } else if (item.type === 'evidence') {
       // Evidence tag

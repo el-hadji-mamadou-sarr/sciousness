@@ -8,7 +8,6 @@ export class Accusation extends Scene {
   private selectedSuspect: Suspect | null = null;
   private suspectButtons: GameObjects.Container[] = [];
   private confirmPanel: GameObjects.Container | null = null;
-  private resultPanel: GameObjects.Container | null = null;
 
   constructor() {
     super('Accusation');
@@ -322,69 +321,17 @@ export class Accusation extends Scene {
   }
 
   private showResult(correct: boolean): void {
-    if (this.confirmPanel) this.confirmPanel.setVisible(false);
-    this.suspectButtons.forEach((btn) => btn.setVisible(false));
+    const guiltySuspect = this.currentCase?.suspects.find(s => s.isGuilty);
 
-    const { width, height } = this.scale;
-    const mobile = this.isMobile();
-
-    this.resultPanel = this.add.container(width / 2, height / 2);
-
-    const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = height - (mobile ? 60 : 80);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(correct ? 0x0a2a0a : 0x2a0a0a, 0.95);
-    bg.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 10);
-    bg.lineStyle(3, correct ? 0x00ff00 : 0xff0000, 1);
-    bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 10);
-    this.resultPanel.add(bg);
-
-    const titleText = correct ? 'SOLVED!' : 'WRONG!';
-    const titleColor = correct ? '#00ff00' : '#ff0000';
-    this.resultPanel.add(this.add.text(0, -panelHeight / 2 + 35, titleText, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(24)}px`,
-      color: titleColor, stroke: '#000000', strokeThickness: 3,
-      resolution: 2,
-    }).setOrigin(0.5));
-
-    const explanation = this.buildExplanation(correct);
-
-    this.resultPanel.add(this.add.text(0, 10, explanation, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#cccccc',
-      align: 'center', wordWrap: { width: panelWidth - 40 }, lineSpacing: 4,
-      resolution: 2,
-    }).setOrigin(0.5));
-
-    const playAgainBtn = this.add
-      .text(0, panelHeight / 2 - 35, '[MENU]', {
-        fontFamily: 'Courier New', fontSize: `${this.getFontSize(13)}px`, color: '#ffffff',
-        backgroundColor: '#333333', padding: { x: 15, y: 8 },
-        resolution: 2,
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => playAgainBtn.setStyle({ backgroundColor: '#444444' }))
-      .on('pointerout', () => playAgainBtn.setStyle({ backgroundColor: '#333333' }))
-      .on('pointerdown', () => this.scene.start('MainMenu'));
-    this.resultPanel.add(playAgainBtn);
-  }
-
-  private buildExplanation(correct: boolean): string {
-    if (!this.currentCase) return correct ? 'Case solved!' : 'Wrong suspect!';
-
-    const guiltySuspect = this.currentCase.suspects.find(s => s.isGuilty);
-    const guiltyName = guiltySuspect?.name ?? 'Unknown';
-    const evidence = this.getGuiltyEvidence();
-
-    // Build evidence bullet points (limit to 3 for display)
-    const evidenceList = evidence.slice(0, 3).map(e => `• ${e}`).join('\n');
-
-    if (correct) {
-      return `You caught ${this.selectedSuspect?.name}!\n\nKey Evidence:\n${evidenceList}\n\nGreat detective work!`;
-    } else {
-      return `${this.selectedSuspect?.name} was innocent.\n\nThe killer: ${guiltyName}\n\n${evidenceList}\n\nBetter luck next time!`;
-    }
+    // Transition to GameOver scene with all the data it needs
+    this.scene.start('GameOver', {
+      correct,
+      accusedName: this.selectedSuspect?.name ?? 'Unknown',
+      guiltyName: guiltySuspect?.name ?? 'Unknown',
+      evidence: this.getGuiltyEvidence(),
+      currentCase: this.currentCase,
+      progress: this.progress,
+    });
   }
 
   private createNavigationButtons(_width: number, height: number): void {

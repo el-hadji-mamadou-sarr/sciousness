@@ -310,6 +310,17 @@ export class Accusation extends Scene {
     this.showResult(isCorrect);
   }
 
+  private getGuiltyEvidence(): string[] {
+    if (!this.currentCase) return [];
+
+    const guiltySuspect = this.currentCase.suspects.find(s => s.isGuilty);
+    if (!guiltySuspect) return [];
+
+    // Find clues linked to the guilty suspect
+    const linkedClues = this.currentCase.clues.filter(c => c.linkedTo === guiltySuspect.id);
+    return linkedClues.map(c => c.name);
+  }
+
   private showResult(correct: boolean): void {
     if (this.confirmPanel) this.confirmPanel.setVisible(false);
     this.suspectButtons.forEach((btn) => btn.setVisible(false));
@@ -337,12 +348,7 @@ export class Accusation extends Scene {
       resolution: 2,
     }).setOrigin(0.5));
 
-    let explanation = '';
-    if (correct) {
-      explanation = `You got ${this.selectedSuspect?.name}!\n\nEvidence:\n• Poison from their garden\n• Mud tracks with their fertilizer\n• Victim exposed their scheme\n\nGreat detective work!`;
-    } else {
-      explanation = `${this.selectedSuspect?.name} was innocent.\n\nThe killer: u/CoModeratorSam\n\n• Poison from garden plants\n• Unique fertilizer in mud\n• Vote manipulation motive\n\nBetter luck next time!`;
-    }
+    const explanation = this.buildExplanation(correct);
 
     this.resultPanel.add(this.add.text(0, 10, explanation, {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#cccccc',
@@ -362,6 +368,23 @@ export class Accusation extends Scene {
       .on('pointerout', () => playAgainBtn.setStyle({ backgroundColor: '#333333' }))
       .on('pointerdown', () => this.scene.start('MainMenu'));
     this.resultPanel.add(playAgainBtn);
+  }
+
+  private buildExplanation(correct: boolean): string {
+    if (!this.currentCase) return correct ? 'Case solved!' : 'Wrong suspect!';
+
+    const guiltySuspect = this.currentCase.suspects.find(s => s.isGuilty);
+    const guiltyName = guiltySuspect?.name ?? 'Unknown';
+    const evidence = this.getGuiltyEvidence();
+
+    // Build evidence bullet points (limit to 3 for display)
+    const evidenceList = evidence.slice(0, 3).map(e => `• ${e}`).join('\n');
+
+    if (correct) {
+      return `You caught ${this.selectedSuspect?.name}!\n\nKey Evidence:\n${evidenceList}\n\nGreat detective work!`;
+    } else {
+      return `${this.selectedSuspect?.name} was innocent.\n\nThe killer: ${guiltyName}\n\n${evidenceList}\n\nBetter luck next time!`;
+    }
   }
 
   private createNavigationButtons(_width: number, height: number): void {

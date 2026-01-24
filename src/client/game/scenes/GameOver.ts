@@ -176,7 +176,7 @@ export class GameOver extends Scene {
 
   private createPlayerStatsPanel(width: number, height: number, mobile: boolean): void {
     const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = mobile ? 35 : 40;
+    const panelHeight = mobile ? 45 : 50;
     const panelY = mobile ? 200 : 260;
 
     const container = this.add.container(width / 2, panelY);
@@ -196,11 +196,11 @@ export class GameOver extends Scene {
     const suspectsInterrogated = progress?.suspectsInterrogated.length ?? 0;
     const totalSuspects = currentCase?.suspects.length ?? 0;
 
-    // Stats text
+    // Stats text - larger for mobile
     const statsText = `Clues: ${cluesFound}/${totalClues}  |  Interrogated: ${suspectsInterrogated}/${totalSuspects}`;
     container.add(this.add.text(0, panelHeight / 2, statsText, {
       fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(9)}px`,
+      fontSize: `${this.getFontSize(12)}px`,
       color: '#ffd700',
       resolution: 2,
     }).setOrigin(0.5));
@@ -225,8 +225,8 @@ export class GameOver extends Scene {
     if (!this.leaderboard) return;
 
     const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = mobile ? 100 : 120;
-    const panelY = mobile ? 245 : 315;
+    const panelHeight = mobile ? 115 : 130;
+    const panelY = mobile ? 255 : 325;
 
     this.leaderboardContainer = this.add.container(width / 2, panelY);
 
@@ -238,45 +238,45 @@ export class GameOver extends Scene {
     bg.strokeRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 8);
     this.leaderboardContainer.add(bg);
 
-    // Title
-    this.leaderboardContainer.add(this.add.text(0, 12, '📊 COMMUNITY STATS', {
+    // Title - larger
+    this.leaderboardContainer.add(this.add.text(0, 14, ' COMMUNITY STATS', {
       fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(10)}px`,
+      fontSize: `${this.getFontSize(13)}px`,
       color: '#6c5ce7',
       resolution: 2,
     }).setOrigin(0.5));
 
-    // Total players and solve rate
+    // Total players and solve rate - larger fonts
     const totalText = `${this.leaderboard.totalPlayers} detectives played`;
     const solveText = `${this.leaderboard.solveRate}% solve rate (${this.leaderboard.solvedCount} solved)`;
 
-    this.leaderboardContainer.add(this.add.text(0, mobile ? 30 : 35, totalText, {
+    this.leaderboardContainer.add(this.add.text(0, mobile ? 35 : 40, totalText, {
       fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(9)}px`,
+      fontSize: `${this.getFontSize(11)}px`,
       color: '#ffffff',
       resolution: 2,
     }).setOrigin(0.5));
 
-    this.leaderboardContainer.add(this.add.text(0, mobile ? 45 : 52, solveText, {
+    this.leaderboardContainer.add(this.add.text(0, mobile ? 52 : 58, solveText, {
       fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(8)}px`,
+      fontSize: `${this.getFontSize(10)}px`,
       color: '#aaaaaa',
       resolution: 2,
     }).setOrigin(0.5));
 
-    // Suspect accusation breakdown
+    // Suspect accusation breakdown - larger fonts
     if (this.leaderboard.suspectStats.length > 0) {
       const suspectLines = this.leaderboard.suspectStats.map(s => {
         const bar = this.createPercentageBar(s.percentage);
-        return `${s.suspectName.substring(0, mobile ? 12 : 18)}: ${bar} ${s.percentage}%`;
+        return `${s.suspectName.substring(0, mobile ? 10 : 16)}: ${bar} ${s.percentage}%`;
       }).join('\n');
 
-      this.leaderboardContainer.add(this.add.text(0, mobile ? 72 : 85, suspectLines, {
+      this.leaderboardContainer.add(this.add.text(0, mobile ? 82 : 95, suspectLines, {
         fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(7)}px`,
+        fontSize: `${this.getFontSize(9)}px`,
         color: '#888888',
         align: 'left',
-        lineSpacing: 2,
+        lineSpacing: 4,
         resolution: 2,
       }).setOrigin(0.5));
     }
@@ -289,13 +289,13 @@ export class GameOver extends Scene {
   }
 
   private createLeaderboardFallback(width: number, height: number, mobile: boolean): void {
-    const panelY = mobile ? 245 : 315;
+    const panelY = mobile ? 255 : 325;
 
     this.leaderboardContainer = this.add.container(width / 2, panelY);
 
     this.leaderboardContainer.add(this.add.text(0, 20, 'Community stats loading...', {
       fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(9)}px`,
+      fontSize: `${this.getFontSize(11)}px`,
       color: '#555555',
       resolution: 2,
     }).setOrigin(0.5));

@@ -96,7 +96,7 @@ export class MainMenu extends Scene {
     if (!this.caseTitle) {
       this.caseTitle = this.add.text(0, 0, "CASE #001:\nThe Moderator's Last Ban", {
         fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(11)}px`,
+        fontSize: `${this.getFontSize(12)}px`,
         color: '#ffd700',
         align: 'center',
         lineSpacing: 4,

@@ -6,6 +6,9 @@ import {
   AccuseRequest,
   AccuseResponse,
   PlayerProgress,
+  LeaderboardResponse,
+  LeaderboardStats,
+  SuspectStats,
 } from '../shared/types/game';
 import { redis, createServer, context } from '@devvit/web/server';
 import { createPost } from './core/post';
@@ -178,6 +181,10 @@ router.post<object, AccuseResponse | { status: string; message: string }, Accuse
       const accuseKey = `accuse:${postId}:${suspectId}`;
       await redis.incrBy(accuseKey, 1);
 
+      // Track total players who made an accusation
+      const totalKey = `stats:${postId}:total`;
+      await redis.incrBy(totalKey, 1);
+
       if (progress.correct) {
         const statsKey = `stats:${postId}:solved`;
         await redis.incrBy(statsKey, 1);
@@ -228,6 +235,76 @@ router.get<object, { type: string; postId: string; progress: PlayerProgress } | 
       res.status(400).json({
         status: 'error',
         message: 'Failed to get progress',
+      });
+    }
+  }
+);
+
+// Get leaderboard stats
+router.get<object, LeaderboardResponse | { status: string; message: string }>(
+  '/api/game/leaderboard',
+  async (_req, res): Promise<void> => {
+    const { postId } = context;
+
+    if (!postId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'postId is required',
+      });
+      return;
+    }
+
+    try {
+      const currentCase = getCurrentCase();
+
+      // Get total players and solved count
+      const totalKey = `stats:${postId}:total`;
+      const solvedKey = `stats:${postId}:solved`;
+
+      const totalStr = await redis.get(totalKey);
+      const solvedStr = await redis.get(solvedKey);
+
+      const totalPlayers = totalStr ? parseInt(totalStr, 10) : 0;
+      const solvedCount = solvedStr ? parseInt(solvedStr, 10) : 0;
+      const solveRate = totalPlayers > 0 ? Math.round((solvedCount / totalPlayers) * 100) : 0;
+
+      // Get accusation stats for each suspect
+      const suspectStats: SuspectStats[] = [];
+
+      for (const suspect of currentCase.suspects) {
+        const accuseKey = `accuse:${postId}:${suspect.id}`;
+        const accuseStr = await redis.get(accuseKey);
+        const accusations = accuseStr ? parseInt(accuseStr, 10) : 0;
+        const percentage = totalPlayers > 0 ? Math.round((accusations / totalPlayers) * 100) : 0;
+
+        suspectStats.push({
+          suspectId: suspect.id,
+          suspectName: suspect.name,
+          accusations,
+          percentage,
+        });
+      }
+
+      // Sort by accusations (most accused first)
+      suspectStats.sort((a, b) => b.accusations - a.accusations);
+
+      const stats: LeaderboardStats = {
+        totalPlayers,
+        solvedCount,
+        solveRate,
+        suspectStats,
+      };
+
+      res.json({
+        type: 'leaderboard',
+        postId,
+        stats,
+      });
+    } catch (error) {
+      console.error(`API Leaderboard Error:`, error);
+      res.status(400).json({
+        status: 'error',
+        message: 'Failed to get leaderboard',
       });
     }
   }

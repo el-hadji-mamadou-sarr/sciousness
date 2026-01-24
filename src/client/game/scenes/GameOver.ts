@@ -1,5 +1,5 @@
 import { Scene, GameObjects } from 'phaser';
-import { Case, PlayerProgress } from '../../../shared/types/game';
+import { Case, PlayerProgress, LeaderboardStats, LeaderboardResponse } from '../../../shared/types/game';
 
 interface GameOverData {
   correct: boolean;
@@ -12,6 +12,8 @@ interface GameOverData {
 
 export class GameOver extends Scene {
   private data: GameOverData | null = null;
+  private leaderboard: LeaderboardStats | null = null;
+  private leaderboardContainer: GameObjects.Container | null = null;
 
   constructor() {
     super('GameOver');
@@ -29,9 +31,10 @@ export class GameOver extends Scene {
 
   init(data: GameOverData) {
     this.data = data;
+    this.leaderboard = null;
   }
 
-  create() {
+  async create() {
     const { width, height } = this.scale;
     const mobile = this.isMobile();
     const correct = this.data?.correct ?? false;
@@ -55,8 +58,11 @@ export class GameOver extends Scene {
     // Explanation panel
     this.createExplanationPanel(width, height, mobile, correct);
 
-    // Stats panel
-    this.createStatsPanel(width, height, mobile);
+    // Player stats panel
+    this.createPlayerStatsPanel(width, height, mobile);
+
+    // Leaderboard panel (loads async)
+    await this.loadAndCreateLeaderboard(width, height, mobile);
 
     // Play again button
     this.createPlayAgainButton(width, height, mobile);
@@ -74,31 +80,31 @@ export class GameOver extends Scene {
   }
 
   private createResultBadge(width: number, mobile: boolean, correct: boolean): void {
-    const badgeY = mobile ? 40 : 60;
-    const badgeSize = mobile ? 50 : 70;
+    const badgeY = mobile ? 30 : 45;
+    const badgeSize = mobile ? 35 : 50;
 
     // Badge circle
     const badge = this.add.graphics();
     badge.lineStyle(3, correct ? 0x00ff00 : 0xff0000, 1);
     badge.strokeCircle(width / 2, badgeY, badgeSize);
     badge.lineStyle(1, correct ? 0x00ff00 : 0xff0000, 0.3);
-    badge.strokeCircle(width / 2, badgeY, badgeSize + 8);
+    badge.strokeCircle(width / 2, badgeY, badgeSize + 6);
 
     // Result icon
     const icon = correct ? '✓' : '✗';
     this.add.text(width / 2, badgeY, icon, {
       fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(32)}px`,
+      fontSize: `${this.getFontSize(24)}px`,
       color: correct ? '#00ff00' : '#ff0000',
       resolution: 2,
     }).setOrigin(0.5);
 
     // Title text
-    const titleY = badgeY + badgeSize + (mobile ? 15 : 25);
+    const titleY = badgeY + badgeSize + (mobile ? 10 : 15);
     const titleText = correct ? 'CASE SOLVED' : 'CASE FAILED';
     this.add.text(width / 2, titleY, titleText, {
       fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(20)}px`,
+      fontSize: `${this.getFontSize(16)}px`,
       color: correct ? '#00ff00' : '#ff4444',
       stroke: '#000000',
       strokeThickness: 2,
@@ -108,11 +114,11 @@ export class GameOver extends Scene {
 
   private createCaseInfo(width: number, mobile: boolean): void {
     const caseTitle = this.data?.currentCase?.title ?? 'Unknown Case';
-    const y = mobile ? 120 : 170;
+    const y = mobile ? 95 : 130;
 
     this.add.text(width / 2, y, caseTitle, {
       fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(10)}px`,
+      fontSize: `${this.getFontSize(9)}px`,
       color: '#888888',
       resolution: 2,
     }).setOrigin(0.5);
@@ -120,8 +126,8 @@ export class GameOver extends Scene {
 
   private createExplanationPanel(width: number, height: number, mobile: boolean, correct: boolean): void {
     const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = mobile ? 100 : 120;
-    const panelY = mobile ? 150 : 210;
+    const panelHeight = mobile ? 80 : 95;
+    const panelY = mobile ? 110 : 150;
 
     const container = this.add.container(width / 2, panelY);
 
@@ -143,35 +149,35 @@ export class GameOver extends Scene {
 
     if (correct) {
       headerText = `You caught ${accusedName}!`;
-      const evidenceList = evidence.slice(0, 3).map(e => `• ${e}`).join('\n');
+      const evidenceList = evidence.slice(0, 2).map(e => `• ${e}`).join('\n');
       detailText = `Key Evidence:\n${evidenceList}`;
     } else {
       headerText = `${accusedName} was innocent.`;
-      const evidenceList = evidence.slice(0, 3).map(e => `• ${e}`).join('\n');
+      const evidenceList = evidence.slice(0, 2).map(e => `• ${e}`).join('\n');
       detailText = `The killer: ${guiltyName}\n${evidenceList}`;
     }
 
-    container.add(this.add.text(0, 15, headerText, {
+    container.add(this.add.text(0, 12, headerText, {
       fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(11)}px`,
+      fontSize: `${this.getFontSize(10)}px`,
       color: '#ffffff',
       resolution: 2,
     }).setOrigin(0.5));
 
-    container.add(this.add.text(0, panelHeight / 2 + 10, detailText, {
+    container.add(this.add.text(0, panelHeight / 2 + 8, detailText, {
       fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(9)}px`,
+      fontSize: `${this.getFontSize(8)}px`,
       color: '#aaaaaa',
       align: 'center',
-      lineSpacing: 3,
+      lineSpacing: 2,
       resolution: 2,
     }).setOrigin(0.5));
   }
 
-  private createStatsPanel(width: number, height: number, mobile: boolean): void {
+  private createPlayerStatsPanel(width: number, height: number, mobile: boolean): void {
     const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = mobile ? 50 : 60;
-    const panelY = mobile ? 265 : 350;
+    const panelHeight = mobile ? 35 : 40;
+    const panelY = mobile ? 200 : 260;
 
     const container = this.add.container(width / 2, panelY);
 
@@ -194,21 +200,116 @@ export class GameOver extends Scene {
     const statsText = `Clues: ${cluesFound}/${totalClues}  |  Interrogated: ${suspectsInterrogated}/${totalSuspects}`;
     container.add(this.add.text(0, panelHeight / 2, statsText, {
       fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(10)}px`,
+      fontSize: `${this.getFontSize(9)}px`,
       color: '#ffd700',
       resolution: 2,
     }).setOrigin(0.5));
   }
 
+  private async loadAndCreateLeaderboard(width: number, height: number, mobile: boolean): Promise<void> {
+    try {
+      const response = await fetch('/api/game/leaderboard');
+      if (response.ok) {
+        const data = (await response.json()) as LeaderboardResponse;
+        this.leaderboard = data.stats;
+        this.createLeaderboardPanel(width, height, mobile);
+      }
+    } catch (error) {
+      console.error('Failed to load leaderboard:', error);
+      // Show fallback message
+      this.createLeaderboardFallback(width, height, mobile);
+    }
+  }
+
+  private createLeaderboardPanel(width: number, height: number, mobile: boolean): void {
+    if (!this.leaderboard) return;
+
+    const panelWidth = width - (mobile ? 30 : 60);
+    const panelHeight = mobile ? 100 : 120;
+    const panelY = mobile ? 245 : 315;
+
+    this.leaderboardContainer = this.add.container(width / 2, panelY);
+
+    // Panel background
+    const bg = this.add.graphics();
+    bg.fillStyle(0x1a1a2e, 0.9);
+    bg.fillRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 8);
+    bg.lineStyle(2, 0x6c5ce7, 0.6);
+    bg.strokeRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 8);
+    this.leaderboardContainer.add(bg);
+
+    // Title
+    this.leaderboardContainer.add(this.add.text(0, 12, '📊 COMMUNITY STATS', {
+      fontFamily: 'Courier New',
+      fontSize: `${this.getFontSize(10)}px`,
+      color: '#6c5ce7',
+      resolution: 2,
+    }).setOrigin(0.5));
+
+    // Total players and solve rate
+    const totalText = `${this.leaderboard.totalPlayers} detectives played`;
+    const solveText = `${this.leaderboard.solveRate}% solve rate (${this.leaderboard.solvedCount} solved)`;
+
+    this.leaderboardContainer.add(this.add.text(0, mobile ? 30 : 35, totalText, {
+      fontFamily: 'Courier New',
+      fontSize: `${this.getFontSize(9)}px`,
+      color: '#ffffff',
+      resolution: 2,
+    }).setOrigin(0.5));
+
+    this.leaderboardContainer.add(this.add.text(0, mobile ? 45 : 52, solveText, {
+      fontFamily: 'Courier New',
+      fontSize: `${this.getFontSize(8)}px`,
+      color: '#aaaaaa',
+      resolution: 2,
+    }).setOrigin(0.5));
+
+    // Suspect accusation breakdown
+    if (this.leaderboard.suspectStats.length > 0) {
+      const suspectLines = this.leaderboard.suspectStats.map(s => {
+        const bar = this.createPercentageBar(s.percentage);
+        return `${s.suspectName.substring(0, mobile ? 12 : 18)}: ${bar} ${s.percentage}%`;
+      }).join('\n');
+
+      this.leaderboardContainer.add(this.add.text(0, mobile ? 72 : 85, suspectLines, {
+        fontFamily: 'Courier New',
+        fontSize: `${this.getFontSize(7)}px`,
+        color: '#888888',
+        align: 'left',
+        lineSpacing: 2,
+        resolution: 2,
+      }).setOrigin(0.5));
+    }
+  }
+
+  private createPercentageBar(percentage: number): string {
+    const filled = Math.round(percentage / 10);
+    const empty = 10 - filled;
+    return '█'.repeat(filled) + '░'.repeat(empty);
+  }
+
+  private createLeaderboardFallback(width: number, height: number, mobile: boolean): void {
+    const panelY = mobile ? 245 : 315;
+
+    this.leaderboardContainer = this.add.container(width / 2, panelY);
+
+    this.leaderboardContainer.add(this.add.text(0, 20, 'Community stats loading...', {
+      fontFamily: 'Courier New',
+      fontSize: `${this.getFontSize(9)}px`,
+      color: '#555555',
+      resolution: 2,
+    }).setOrigin(0.5));
+  }
+
   private createPlayAgainButton(width: number, height: number, mobile: boolean): void {
-    const btnY = height - (mobile ? 40 : 60);
+    const btnY = height - (mobile ? 25 : 40);
 
     const btn = this.add.text(width / 2, btnY, '[RETURN TO MENU]', {
       fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(12)}px`,
+      fontSize: `${this.getFontSize(11)}px`,
       color: '#ffffff',
       backgroundColor: '#333333',
-      padding: { x: 15, y: 8 },
+      padding: { x: 12, y: 6 },
       resolution: 2,
     })
       .setOrigin(0.5)

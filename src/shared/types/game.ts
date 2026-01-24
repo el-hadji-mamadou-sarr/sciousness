@@ -97,3 +97,23 @@ export type GetProgressResponse = {
   postId: string;
   progress: PlayerProgress;
 };
+
+export interface SuspectStats {
+  suspectId: string;
+  suspectName: string;
+  accusations: number;
+  percentage: number;
+}
+
+export interface LeaderboardStats {
+  totalPlayers: number;
+  solvedCount: number;
+  solveRate: number;
+  suspectStats: SuspectStats[];
+}
+
+export type LeaderboardResponse = {
+  type: 'leaderboard';
+  postId: string;
+  stats: LeaderboardStats;
+};

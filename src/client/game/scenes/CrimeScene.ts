@@ -614,10 +614,12 @@ export class CrimeScene extends Scene {
     const closeBtn = this.add.text(0, 50, '[TAP TO CLOSE]', {
       fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#888888',
       resolution: 2,
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerdown', () => notification.destroy());
+    }).setOrigin(0.5);
     notification.add(closeBtn);
 
-    this.time.delayedCall(4000, () => { if (notification.active) notification.destroy(); });
+    // Make the entire notification background clickable to close
+    bg.setInteractive(new Phaser.Geom.Rectangle(-panelW / 2, -70, panelW, 140), Phaser.Geom.Rectangle.Contains);
+    bg.on('pointerdown', () => notification.destroy());
   }
 
   private createInfoPanel(width: number, height: number): void {

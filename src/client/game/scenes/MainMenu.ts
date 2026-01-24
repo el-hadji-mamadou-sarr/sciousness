@@ -240,17 +240,17 @@ export class MainMenu extends Scene {
     this.statusBadge.clear();
     this.statusBadge.setVisible(true);
 
-    const badgeWidth = mobile ? width - 40 : 280;
-    const badgeHeight = mobile ? 70 : 80;
+    const badgeWidth = mobile ? width - 30 : 300;
+    const badgeHeight = mobile ? 90 : 100;
     const badgeX = width / 2 - badgeWidth / 2;
-    const badgeY = height * (mobile ? 0.46 : 0.46);
+    const badgeY = height * (mobile ? 0.42 : 0.44);
 
-    this.statusBadge.fillStyle(wasCorrect ? 0x0a2a0a : 0x2a0a0a, 0.9);
-    this.statusBadge.fillRoundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 8);
-    this.statusBadge.lineStyle(2, wasCorrect ? 0x00ff00 : 0xff4444, 0.8);
-    this.statusBadge.strokeRoundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 8);
+    this.statusBadge.fillStyle(wasCorrect ? 0x0a2a0a : 0x2a0a0a, 0.95);
+    this.statusBadge.fillRoundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 10);
+    this.statusBadge.lineStyle(3, wasCorrect ? 0x00ff00 : 0xff4444, 0.9);
+    this.statusBadge.strokeRoundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 10);
 
-    // Status text
+    // Status text - larger for mobile
     const statusMessage = wasCorrect
       ? '✓ CASE SOLVED\nYou caught the killer!'
       : '✗ CASE FAILED\nThe killer got away...';
@@ -258,10 +258,10 @@ export class MainMenu extends Scene {
     if (!this.statusText) {
       this.statusText = this.add.text(0, 0, statusMessage, {
         fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(12)}px`,
+        fontSize: `${this.getFontSize(16)}px`,
         color: wasCorrect ? '#00ff00' : '#ff4444',
         align: 'center',
-        lineSpacing: 6,
+        lineSpacing: 8,
         resolution: 2,
       }).setOrigin(0.5);
     } else {
@@ -269,17 +269,17 @@ export class MainMenu extends Scene {
       this.statusText.setColor(wasCorrect ? '#00ff00' : '#ff4444');
     }
     this.statusText.setPosition(width / 2, badgeY + badgeHeight / 2);
-    this.statusText.setFontSize(this.getFontSize(12));
+    this.statusText.setFontSize(this.getFontSize(16));
     this.statusText.setVisible(true);
 
-    // View Result button
+    // View Result button - larger and more prominent for mobile
     if (!this.viewResultButton) {
-      this.viewResultButton = this.add.text(0, 0, '[VIEW RESULT]', {
+      this.viewResultButton = this.add.text(0, 0, '[ VIEW RESULT ]', {
         fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(14)}px`,
+        fontSize: `${this.getFontSize(18)}px`,
         color: '#ffd700',
         backgroundColor: '#1a1a2e',
-        padding: { x: 15, y: 8 },
+        padding: { x: mobile ? 20 : 18, y: mobile ? 12 : 10 },
         resolution: 2,
       }).setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
@@ -295,8 +295,8 @@ export class MainMenu extends Scene {
           this.goToResultScreen();
         });
     }
-    this.viewResultButton.setPosition(width / 2, height * (mobile ? 0.72 : 0.72));
-    this.viewResultButton.setFontSize(this.getFontSize(14));
+    this.viewResultButton.setPosition(width / 2, height * (mobile ? 0.70 : 0.70));
+    this.viewResultButton.setFontSize(this.getFontSize(18));
     this.viewResultButton.setVisible(true);
 
     // Update instructions for returning players
@@ -304,16 +304,16 @@ export class MainMenu extends Scene {
     if (!this.instructions) {
       this.instructions = this.add.text(0, 0, instructionText, {
         fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(9)}px`,
-        color: '#555555',
+        fontSize: `${this.getFontSize(11)}px`,
+        color: '#666666',
         align: 'center',
         resolution: 2,
       }).setOrigin(0.5);
     } else {
       this.instructions.setText(instructionText);
     }
-    this.instructions.setPosition(width / 2, height * (mobile ? 0.84 : 0.84));
-    this.instructions.setFontSize(this.getFontSize(9));
+    this.instructions.setPosition(width / 2, height * (mobile ? 0.82 : 0.82));
+    this.instructions.setFontSize(this.getFontSize(11));
     this.instructions.setVisible(true);
   }
 

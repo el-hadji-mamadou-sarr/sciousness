@@ -84,6 +84,18 @@ export class MainMenu extends Scene {
     return this.progress?.correct === true;
   }
 
+  private async startGame(): Promise<void> {
+    // If admin has already played, reset their progress first
+    if (this.isAdmin() && this.progress?.solved) {
+      try {
+        await fetch('/api/game/reset', { method: 'POST' });
+      } catch (error) {
+        console.error('Failed to reset admin progress:', error);
+      }
+    }
+    this.scene.start('CrimeScene');
+  }
+
   private refreshLayout(): void {
     const { width, height } = this.scale;
     const mobile = this.isMobile();
@@ -202,7 +214,7 @@ export class MainMenu extends Scene {
           this.startButton?.setStyle({ backgroundColor: '#1a1a2e' });
         })
         .on('pointerdown', () => {
-          this.scene.start('CrimeScene');
+          this.startGame();
         });
     }
     this.startButton.setPosition(width / 2, height * (mobile ? 0.52 : 0.52));

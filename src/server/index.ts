@@ -240,6 +240,62 @@ router.get<object, { type: string; postId: string; progress: PlayerProgress } | 
   }
 );
 
+// Admin usernames that can reset their progress for testing
+const ADMIN_USERNAMES = ['ashscars'];
+
+// Reset progress (admin only)
+router.post<object, { type: string; postId: string; progress: PlayerProgress } | { status: string; message: string }>(
+  '/api/game/reset',
+  async (_req, res): Promise<void> => {
+    const { postId, userId } = context;
+
+    if (!postId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'postId is required',
+      });
+      return;
+    }
+
+    // Check if user is admin
+    const username = context.username?.toLowerCase();
+    if (!username || !ADMIN_USERNAMES.includes(username)) {
+      res.status(403).json({
+        status: 'error',
+        message: 'Unauthorized: admin access required',
+      });
+      return;
+    }
+
+    try {
+      const currentCase = getCurrentCase();
+
+      // Create fresh progress
+      const freshProgress: PlayerProgress = {
+        odayNumber: currentCase.dayNumber,
+        cluesFound: [],
+        suspectsInterrogated: [],
+        solved: false,
+        correct: false,
+      };
+
+      await savePlayerProgress(postId, freshProgress);
+
+      res.json({
+        type: 'reset_progress',
+        postId,
+        progress: freshProgress,
+      });
+    } catch (error) {
+      console.error(`API Reset Error:`, error);
+      res.status(400).json({
+        status: 'error',
+        message: 'Failed to reset progress',
+      });
+    }
+  }
+);
+
 // Get leaderboard stats
 router.get<object, LeaderboardResponse | { status: string; message: string }>(
   '/api/game/leaderboard',

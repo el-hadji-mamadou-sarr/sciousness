@@ -8,6 +8,7 @@ import {
 } from '../../../shared/types/game';
 import { case1 } from './crime-scenes/case1';
 import { drawCrimeSceneObject } from '../utils/ProceduralGraphics';
+import { transitionToScene } from '../utils/SceneTransition';
 
 // Evidence item positions on the crime board
 interface BoardItem {
@@ -721,7 +722,7 @@ export class CrimeScene extends Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => interrogateBtn.setColor('#00ffff'))
       .on('pointerout', () => interrogateBtn.setColor('#00ff00'))
-      .on('pointerdown', () => this.scene.start('Interrogation'));
+      .on('pointerdown', () => transitionToScene(this, 'Interrogation'));
 
     const accuseBtn = this.add
       .text(width / 2 + (mobile ? 55 : 90), btnY, mobile ? '[ACCUSE]' : '[ ACCUSE ]', {
@@ -733,7 +734,7 @@ export class CrimeScene extends Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => accuseBtn.setColor('#ff8888'))
       .on('pointerout', () => accuseBtn.setColor('#ff4444'))
-      .on('pointerdown', () => this.scene.start('Accusation'));
+      .on('pointerdown', () => transitionToScene(this, 'Accusation'));
   }
 
   private handleResize(width: number, height: number): void {

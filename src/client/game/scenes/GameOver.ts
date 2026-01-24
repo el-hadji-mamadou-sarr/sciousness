@@ -1,5 +1,6 @@
 import { Scene, GameObjects } from 'phaser';
 import { Case, PlayerProgress, LeaderboardStats, LeaderboardResponse } from '../../../shared/types/game';
+import { transitionToScene } from '../utils/SceneTransition';
 
 interface GameOverData {
   correct: boolean;
@@ -11,7 +12,7 @@ interface GameOverData {
 }
 
 export class GameOver extends Scene {
-  private data: GameOverData | null = null;
+  private gameData: GameOverData | null = null;
   private leaderboard: LeaderboardStats | null = null;
   private leaderboardContainer: GameObjects.Container | null = null;
 
@@ -30,14 +31,14 @@ export class GameOver extends Scene {
   }
 
   init(data: GameOverData) {
-    this.data = data;
+    this.gameData = data;
     this.leaderboard = null;
   }
 
   async create() {
     const { width, height } = this.scale;
     const mobile = this.isMobile();
-    const correct = this.data?.correct ?? false;
+    const correct = this.gameData?.correct ?? false;
 
     // Background
     this.cameras.main.setBackgroundColor(correct ? 0x0a1a0a : 0x1a0a0a);
@@ -67,7 +68,7 @@ export class GameOver extends Scene {
     // Play again button
     this.createPlayAgainButton(width, height, mobile);
 
-    this.scale.on('resize', () => this.scene.restart(this.data ?? undefined));
+    this.scale.on('resize', () => this.scene.restart(this.gameData ?? undefined));
   }
 
   private createScanlines(width: number, height: number): void {
@@ -113,7 +114,7 @@ export class GameOver extends Scene {
   }
 
   private createCaseInfo(width: number, mobile: boolean): void {
-    const caseTitle = this.data?.currentCase?.title ?? 'Unknown Case';
+    const caseTitle = this.gameData?.currentCase?.title ?? 'Unknown Case';
     const y = mobile ? 95 : 130;
 
     this.add.text(width / 2, y, caseTitle, {
@@ -140,9 +141,9 @@ export class GameOver extends Scene {
     container.add(bg);
 
     // Build explanation text
-    const accusedName = this.data?.accusedName ?? 'Unknown';
-    const guiltyName = this.data?.guiltyName ?? 'Unknown';
-    const evidence = this.data?.evidence ?? [];
+    const accusedName = this.gameData?.accusedName ?? 'Unknown';
+    const guiltyName = this.gameData?.guiltyName ?? 'Unknown';
+    const evidence = this.gameData?.evidence ?? [];
 
     let headerText: string;
     let detailText: string;
@@ -189,8 +190,8 @@ export class GameOver extends Scene {
     bg.strokeRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 6);
     container.add(bg);
 
-    const progress = this.data?.progress;
-    const currentCase = this.data?.currentCase;
+    const progress = this.gameData?.progress;
+    const currentCase = this.gameData?.currentCase;
     const cluesFound = progress?.cluesFound.length ?? 0;
     const totalClues = currentCase?.clues.length ?? 0;
     const suspectsInterrogated = progress?.suspectsInterrogated.length ?? 0;
@@ -316,6 +317,6 @@ export class GameOver extends Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => btn.setStyle({ backgroundColor: '#444444', color: '#ffff00' }))
       .on('pointerout', () => btn.setStyle({ backgroundColor: '#333333', color: '#ffffff' }))
-      .on('pointerdown', () => this.scene.start('MainMenu'));
+      .on('pointerdown', () => transitionToScene(this, 'MainMenu'));
   }
 }

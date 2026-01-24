@@ -2,6 +2,7 @@ import { Scene, GameObjects } from 'phaser';
 import { Case, Suspect, PlayerProgress, InitGameResponse, AccuseResponse } from '../../../shared/types/game';
 import { case1 } from './crime-scenes/case1';
 import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
+import { transitionToScene } from '../utils/SceneTransition';
 
 export class Accusation extends Scene {
   private currentCase: Case | null = null;
@@ -319,7 +320,7 @@ export class Accusation extends Scene {
     const guiltySuspect = this.currentCase?.suspects.find(s => s.isGuilty);
 
     // Transition to GameOver scene with all the data it needs
-    this.scene.start('GameOver', {
+    transitionToScene(this, 'GameOver', {
       correct,
       accusedName: this.selectedSuspect?.name ?? 'Unknown',
       guiltyName: guiltySuspect?.name ?? 'Unknown',
@@ -340,6 +341,6 @@ export class Accusation extends Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => backBtn.setColor('#ffffff'))
       .on('pointerout', () => backBtn.setColor('#888888'))
-      .on('pointerdown', () => this.scene.start('Interrogation'));
+      .on('pointerdown', () => transitionToScene(this, 'Interrogation'));
   }
 }

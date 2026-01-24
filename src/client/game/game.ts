@@ -4,6 +4,7 @@ import { MainMenu } from './scenes/MainMenu';
 import * as Phaser from 'phaser';
 import { AUTO, Game } from 'phaser';
 import { Preloader } from './scenes/Preloader';
+import { Loading } from './scenes/Loading';
 import { CrimeScene } from './scenes/CrimeScene';
 import { Interrogation } from './scenes/Interrogation';
 import { Accusation } from './scenes/Accusation';
@@ -22,7 +23,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 1024,
     height: 768,
   },
-  scene: [Boot, Preloader, MainMenu, CrimeScene, Interrogation, Accusation, GameOver],
+  scene: [Boot, Preloader, Loading, MainMenu, CrimeScene, Interrogation, Accusation, GameOver],
 };
 
 const StartGame = (parent: string) => {

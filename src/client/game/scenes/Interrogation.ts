@@ -9,6 +9,7 @@ import {
 } from '../../../shared/types/game';
 import { case1 } from './crime-scenes/case1';
 import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
+import { transitionToScene } from '../utils/SceneTransition';
 
 export class Interrogation extends Scene {
   private currentCase: Case | null = null;
@@ -364,7 +365,7 @@ export class Interrogation extends Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => backBtn.setColor('#ffffff'))
       .on('pointerout', () => backBtn.setColor('#888888'))
-      .on('pointerdown', () => this.scene.start('CrimeScene'));
+      .on('pointerdown', () => transitionToScene(this, 'CrimeScene'));
 
     const accuseBtn = this.add
       .text(width / 2 + (mobile ? 70 : 110), btnY, '[ACCUSE]', {
@@ -375,6 +376,6 @@ export class Interrogation extends Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerover', () => accuseBtn.setColor('#ff8888'))
       .on('pointerout', () => accuseBtn.setColor('#ff4444'))
-      .on('pointerdown', () => this.scene.start('Accusation'));
+      .on('pointerdown', () => transitionToScene(this, 'Accusation'));
   }
 }

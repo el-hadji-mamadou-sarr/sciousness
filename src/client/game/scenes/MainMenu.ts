@@ -1,6 +1,7 @@
 import { Scene, GameObjects } from 'phaser';
 import { Case, PlayerProgress, InitGameResponse } from '../../../shared/types/game';
 import { context } from '@devvit/web/client';
+import { transitionToScene } from '../utils/SceneTransition';
 
 // Admin usernames that can play unlimited times for testing
 const ADMIN_USERNAMES = ['ashscars'];
@@ -93,7 +94,7 @@ export class MainMenu extends Scene {
         console.error('Failed to reset admin progress:', error);
       }
     }
-    this.scene.start('CrimeScene');
+    transitionToScene(this, 'CrimeScene');
   }
 
   private refreshLayout(): void {
@@ -352,7 +353,7 @@ export class MainMenu extends Scene {
     const linkedClues = this.currentCase.clues.filter(c => c.linkedTo === guiltySuspect?.id);
     const evidence = linkedClues.map(c => c.name);
 
-    this.scene.start('GameOver', {
+    transitionToScene(this, 'GameOver', {
       correct: this.progress.correct,
       accusedName: accusedSuspect?.name ?? 'Unknown',
       guiltyName: guiltySuspect?.name ?? 'Unknown',

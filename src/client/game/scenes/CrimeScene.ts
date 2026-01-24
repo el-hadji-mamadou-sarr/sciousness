@@ -9,6 +9,7 @@ import {
 import { case1 } from './crime-scenes/case1';
 import { drawCrimeSceneObject } from '../utils/ProceduralGraphics';
 import { transitionToScene } from '../utils/SceneTransition';
+import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
 
 // Evidence item positions on the crime board
 interface BoardItem {
@@ -19,7 +20,7 @@ interface BoardItem {
   label: string;
   description: string;
   clueId?: string | undefined;
-  linkedTo?: string[] | undefined; // IDs of connected items for red string
+  linkedTo?: string[] | undefined;
 }
 
 export class CrimeScene extends Scene {
@@ -36,38 +37,18 @@ export class CrimeScene extends Scene {
     super('CrimeScene');
   }
 
-  private getFontSize(base: number): number {
-    const { width } = this.scale;
-    const scale = Math.min(width / 320, 1.5);
-    return Math.max(Math.floor(base * scale), Math.floor(base * 0.7), 10);
-  }
-
   private isMobile(): boolean {
-    return this.scale.width < 500;
+    return isMobileScreen(this);
   }
 
   async create() {
     const { width, height } = this.scale;
-
-    // Dark noir background
     this.cameras.main.setBackgroundColor(0x0a0a14);
-
-    // Fetch case data first
     await this.loadGameData();
-
-    // Create the crime board
     this.createCrimeBoard(width, height);
-
-    // Create info panel
     this.createInfoPanel(width, height);
-
-    // Create clue counter
     this.createCluePanel(width, height);
-
-    // Create navigation
     this.createNavigationButtons(width, height);
-
-    // Handle resize
     this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
       this.handleResize(gameSize.width, gameSize.height);
     });
@@ -99,7 +80,6 @@ export class CrimeScene extends Scene {
     const footerHeight = mobile ? 100 : 130;
     const boardY = headerHeight;
     const visibleBoardHeight = height - headerHeight - footerHeight;
-    // Ensure minimum height for board content to avoid overlapping items
     const minBoardHeight = mobile ? 500 : visibleBoardHeight;
     const boardHeight = Math.max(visibleBoardHeight, minBoardHeight);
 
@@ -108,10 +88,8 @@ export class CrimeScene extends Scene {
     const boardWidth = Math.min(width - padding * 2, maxBoardWidth);
     const boardX = (width - boardWidth) / 2;
 
-    // Create board container
     this.boardContainer = this.add.container(boardX, boardY);
 
-    // Add mask for scrolling if needed
     if (boardHeight > visibleBoardHeight) {
       const maskShape = this.make.graphics({});
       maskShape.fillStyle(0xffffff);
@@ -120,57 +98,40 @@ export class CrimeScene extends Scene {
       this.boardContainer.setMask(mask);
     }
 
-    // Noir board background
     const bg = this.createCorkBoard(boardWidth, boardHeight);
 
-    // Enable scrolling if content overflows
     if (boardHeight > visibleBoardHeight) {
       bg.setInteractive(new Phaser.Geom.Rectangle(0, 0, boardWidth, boardHeight), Phaser.Geom.Rectangle.Contains);
       this.input.setDraggable(bg);
 
       bg.on('drag', (pointer: Phaser.Input.Pointer) => {
         if (!this.boardContainer) return;
-
         const dy = pointer.position.y - pointer.prevPosition.y;
         this.boardContainer.y += dy;
-
-        // Clamp position
         const minY = boardY - (boardHeight - visibleBoardHeight);
         const maxY = boardY;
         this.boardContainer.y = Phaser.Math.Clamp(this.boardContainer.y, minY, maxY);
       });
     }
 
-    // Title header
     this.createBoardHeader(width, mobile);
 
-    // Create red string graphics layer (drawn before items so items appear on top)
     this.redStrings = this.add.graphics();
     this.boardContainer.add(this.redStrings);
 
-    // Convert crime scene objects to board items
     const boardItems = this.createBoardItems();
-
-    // Create the visual items on the board
     for (const item of boardItems) {
       this.createBoardItem(item, boardWidth, boardHeight);
     }
-
-    // Draw red strings connecting evidence
     this.drawRedStrings(boardItems, boardWidth, boardHeight);
-
-    // Add case file in corner
     this.createCaseFile(boardWidth, boardHeight, mobile);
   }
 
   private createCorkBoard(boardWidth: number, boardHeight: number): GameObjects.Graphics {
     const bg = this.add.graphics();
-
-    // Dark Noir Board Base
     bg.fillStyle(0x1a1a1a, 1);
     bg.fillRect(0, 0, boardWidth, boardHeight);
 
-    // Subtle noise texture
     bg.fillStyle(0x222222, 0.4);
     for (let i = 0; i < 50; i++) {
       const x = Math.random() * boardWidth;
@@ -179,7 +140,6 @@ export class CrimeScene extends Scene {
       bg.fillCircle(x, y, size);
     }
 
-    // Darker spots
     bg.fillStyle(0x111111, 0.4);
     for (let i = 0; i < 30; i++) {
       const x = Math.random() * boardWidth;
@@ -188,15 +148,13 @@ export class CrimeScene extends Scene {
       bg.fillCircle(x, y, size);
     }
 
-    // Dark Frame
     const frameWidth = 6;
-    bg.fillStyle(0x0f0f0f, 1); // Almost black
-    bg.fillRect(-frameWidth, -frameWidth, boardWidth + frameWidth * 2, frameWidth); // top
-    bg.fillRect(-frameWidth, boardHeight, boardWidth + frameWidth * 2, frameWidth); // bottom
-    bg.fillRect(-frameWidth, 0, frameWidth, boardHeight); // left
-    bg.fillRect(boardWidth, 0, frameWidth, boardHeight); // right
+    bg.fillStyle(0x0f0f0f, 1);
+    bg.fillRect(-frameWidth, -frameWidth, boardWidth + frameWidth * 2, frameWidth);
+    bg.fillRect(-frameWidth, boardHeight, boardWidth + frameWidth * 2, frameWidth);
+    bg.fillRect(-frameWidth, 0, frameWidth, boardHeight);
+    bg.fillRect(boardWidth, 0, frameWidth, boardHeight);
 
-    // Frame highlight (metallic/grey)
     bg.lineStyle(1, 0x333333, 1);
     bg.strokeRect(0, 0, boardWidth, boardHeight);
 
@@ -205,30 +163,24 @@ export class CrimeScene extends Scene {
   }
 
   private createBoardHeader(width: number, mobile: boolean): void {
-    // Title on the wall above board
-    this.add.text(width / 2, mobile ? 12 : 18, 'EVIDENCE BOARD', {
-      fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(16)}px`,
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 2,
-      resolution: 2,
-    }).setOrigin(0.5);
+    createNoirText(this, width / 2, mobile ? 12 : 18, 'EVIDENCE BOARD', {
+      size: 'medium',
+      color: 'white',
+      origin: { x: 0.5, y: 0.5 },
+    });
 
-    this.add.text(width / 2, mobile ? 28 : 40, 'Connect the clues...', {
-      fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(9)}px`,
-      color: '#888888',
-      resolution: 2,
-    }).setOrigin(0.5);
+    createNoirText(this, width / 2, mobile ? 30 : 42, 'CONNECT THE CLUES...', {
+      size: 'small',
+      color: 'gray',
+      origin: { x: 0.5, y: 0.5 },
+      scale: 0.7,
+    });
   }
 
   private createBoardItems(): BoardItem[] {
     if (!this.currentCase) return [];
 
-    // Create board layout - victim photo in center, evidence around
     const items: BoardItem[] = [
-      // Victim photo - center top
       {
         id: 'victim',
         x: 50,
@@ -240,7 +192,6 @@ export class CrimeScene extends Scene {
       },
     ];
 
-    // Position clues/evidence around the board
     const cluePositions = [
       { x: 20, y: 35 },
       { x: 85, y: 35 },
@@ -249,7 +200,6 @@ export class CrimeScene extends Scene {
       { x: 50, y: 50 },
     ];
 
-    // Add crime scene objects as evidence items
     this.currentCase.crimeSceneObjects.forEach((obj, index) => {
       const posIndex = index % cluePositions.length;
       const pos = cluePositions[posIndex]!;
@@ -281,7 +231,6 @@ export class CrimeScene extends Scene {
     const isClue = item.clueId !== undefined;
     const isFound = this.progress?.cluesFound.includes(item.clueId || '') || false;
 
-    // Item size based on type
     let w: number, h: number;
     if (item.type === 'photo') {
       w = mobile ? 55 : 70;
@@ -297,20 +246,14 @@ export class CrimeScene extends Scene {
     const bg = this.add.graphics();
 
     if (item.type === 'photo') {
-      // Noir Photo - Polaroid style
-      bg.fillStyle(0xe8e8e8, 1); // Off-white border
+      bg.fillStyle(0xe8e8e8, 1);
       bg.fillRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 22);
-
-      // Photo area (dark)
       bg.fillStyle(0x1a1a1a, 1);
       bg.fillRect(-w / 2, -h / 2, w, h);
 
-      // Enhanced victim/scene drawing
       if (item.id === 'victim') {
-        // Use procedural victim outline
         drawCrimeSceneObject(bg, -w / 2, -h / 2, w, h, 'victim');
       } else {
-        // Other photos - draw scene hint based on label
         const objectType = item.label.toLowerCase();
         if (objectType.includes('desk')) {
           drawCrimeSceneObject(bg, -w / 2 + 5, -h / 2 + 5, w - 10, h - 10, 'desk');
@@ -325,56 +268,46 @@ export class CrimeScene extends Scene {
         } else if (objectType.includes('phone')) {
           drawCrimeSceneObject(bg, -w / 2 + 5, -h / 2 + 5, w - 10, h - 10, 'phone');
         } else {
-          // Default silhouette for unknown items
           bg.fillStyle(0x333333, 1);
           bg.fillCircle(0, -h / 4, w / 5);
           bg.fillRect(-w / 5, -h / 4 + w / 8, w / 2.5, h / 3);
         }
       }
 
-      // Red X overlay if victim
       if (item.id === 'victim') {
         bg.lineStyle(3, 0xff0000, 0.85);
         bg.lineBetween(-w / 3, -h / 3, w / 3, h / 3 - 10);
         bg.lineBetween(w / 3, -h / 3, -w / 3, h / 3 - 10);
       }
 
-      // Push pin with shine
       bg.fillStyle(0xcc0000, 1);
       bg.fillCircle(0, -h / 2 - 8, 6);
       bg.fillStyle(0xff3333, 1);
       bg.fillCircle(-2, -h / 2 - 10, 2);
 
-      // Photo date stamp
       bg.fillStyle(0xff6600, 0.7);
       bg.fillRect(w / 2 - 18, h / 2 - 8, 14, 6);
 
     } else if (item.type === 'evidence') {
-      // Evidence tag
-      const cardColor = isFound ? 0xd4edda : (isClue ? 0xf0f0f0 : 0xcccccc); // Muted colors
+      const cardColor = isFound ? 0xd4edda : (isClue ? 0xf0f0f0 : 0xcccccc);
       bg.fillStyle(cardColor, 1);
       bg.fillRect(-w / 2, -h / 2, w, h);
 
-      // Tape at top (Translucent white/grey)
       bg.fillStyle(0xffffff, 0.4);
       bg.fillRect(-w / 3, -h / 2 - 3, w / 1.5, 8);
 
-      // Border
       bg.lineStyle(1, isFound ? 0x28a745 : (isClue ? 0x999999 : 0x666666), 1);
       bg.strokeRect(-w / 2, -h / 2, w, h);
 
-      // Evidence marker
       if (isClue) {
         bg.fillStyle(isFound ? 0x28a745 : 0x999999, 1);
         bg.fillCircle(w / 2 - 6, -h / 2 + 6, 6);
       }
 
     } else {
-      // Note (White/Ivory)
       bg.fillStyle(0xfffff0, 1);
       bg.fillRect(-w / 2, -h / 2, w, h);
 
-      // Folded corner
       bg.fillStyle(0xe0e0e0, 1);
       bg.beginPath();
       bg.moveTo(w / 2 - 8, -h / 2);
@@ -383,39 +316,34 @@ export class CrimeScene extends Scene {
       bg.closePath();
       bg.fill();
 
-      // Pin
       bg.fillStyle(0x333333, 1);
       bg.fillCircle(0, -h / 2 + 2, 3);
     }
 
     container.add(bg);
 
-    // Label text
-    const labelColor = item.type === 'photo' ? '#000000' : '#1a1a1a';
+    // Label - use bitmap text
     const labelY = item.type === 'photo' ? h / 2 + 2 : 0;
-
-    const label = this.add.text(0, labelY, item.label, {
-      fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(item.type === 'photo' ? 7 : 8)}px`,
-      color: labelColor,
-      align: 'center',
-      wordWrap: { width: w - 4 },
-      resolution: 2,
-    }).setOrigin(0.5);
+    const label = createNoirText(this, 0, labelY, item.label.toUpperCase(), {
+      size: 'small',
+      color: item.type === 'photo' ? 'gray' : 'darkGray',
+      origin: { x: 0.5, y: 0.5 },
+      scale: 0.5,
+      maxWidth: w - 4,
+    });
     container.add(label);
 
     // Clue indicator
     if (isClue && item.type === 'evidence') {
-      const indicator = this.add.text(w / 2 - 6, -h / 2 + 6, isFound ? '✓' : '?', {
-        fontFamily: 'Arial',
-        fontSize: `${this.getFontSize(9)}px`,
-        color: isFound ? '#ffffff' : '#333333',
-        resolution: 2,
-      }).setOrigin(0.5);
-      container.add(indicator);
+      const indicatorText = createNoirText(this, w / 2 - 6, -h / 2 + 6, isFound ? 'V' : '?', {
+        size: 'small',
+        color: isFound ? 'white' : 'darkGray',
+        origin: { x: 0.5, y: 0.5 },
+        scale: 0.6,
+      });
+      container.add(indicatorText);
     }
 
-    // Make interactive
     const hitArea = new Phaser.Geom.Rectangle(-w / 2 - 5, -h / 2 - 5, w + 10, h + 25);
     container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
 
@@ -443,7 +371,6 @@ export class CrimeScene extends Scene {
     this.redStrings.clear();
     this.redStrings.lineStyle(2, 0xcc0000, 0.7);
 
-    // Draw strings between linked items
     for (const item of items) {
       if (!item.linkedTo) continue;
 
@@ -456,32 +383,27 @@ export class CrimeScene extends Scene {
           const toX = (targetItem.x / 100) * boardWidth;
           const toY = (targetItem.y / 100) * boardHeight;
 
-          // Draw curved string with slight sag using line segments
           const midX = (fromX + toX) / 2;
-          const midY = (fromY + toY) / 2 + 15; // sag
+          const midY = (fromY + toY) / 2 + 15;
 
-          // Approximate curve with line segments
           const steps = 10;
           this.redStrings.beginPath();
           this.redStrings.moveTo(fromX, fromY);
           for (let t = 1; t <= steps; t++) {
             const p = t / steps;
             const invP = 1 - p;
-            // Quadratic bezier formula
             const px = invP * invP * fromX + 2 * invP * p * midX + p * p * toX;
             const py = invP * invP * fromY + 2 * invP * p * midY + p * p * toY;
             this.redStrings.lineTo(px, py);
           }
           this.redStrings.strokePath();
 
-          // Small pin at connection point
           this.redStrings.fillStyle(0xff0000, 1);
           this.redStrings.fillCircle(fromX, fromY, 3);
         }
       }
     }
 
-    // Draw connecting strings between found clues
     const foundClueItems = items.filter(i =>
       i.clueId && this.progress?.cluesFound.includes(i.clueId)
     );
@@ -512,27 +434,20 @@ export class CrimeScene extends Scene {
     const container = this.add.container(x, y);
 
     const bg = this.add.graphics();
-    // Dark Grey Folder
     bg.fillStyle(0x333333, 1);
     bg.fillRect(-fileW / 2, -fileH / 2, fileW, fileH);
-
-    // Tab
     bg.fillRect(-fileW / 2 + 10, -fileH / 2 - 8, fileW / 3, 10);
-
-    // Shadow
     bg.fillStyle(0x222222, 1);
     bg.fillRect(-fileW / 2 + 2, fileH / 2 - 3, fileW - 4, 3);
 
     container.add(bg);
 
-    const caseLabel = this.add.text(0, -5, `CASE\n#${this.currentCase?.dayNumber.toString().padStart(3, '0') || '001'}`, {
-      fontFamily: 'Courier New',
-      fontSize: `${this.getFontSize(12)}px`,
-      fontStyle: 'bold',
-      color: '#f7f6f6',
-      align: 'center',
-      resolution: 2,
-    }).setOrigin(0.5);
+    const caseLabel = createNoirText(this, 0, -5, `CASE\n#${this.currentCase?.dayNumber.toString().padStart(3, '0') || '001'}`, {
+      size: 'small',
+      color: 'white',
+      origin: { x: 0.5, y: 0.5 },
+      align: 1,
+    });
     container.add(caseLabel);
 
     this.boardContainer!.add(container);
@@ -544,7 +459,6 @@ export class CrimeScene extends Scene {
     if (item.clueId && !this.progress?.cluesFound.includes(item.clueId)) {
       await this.findClue(item.clueId);
 
-      // Redraw strings to show new connections
       const boardItems = this.createBoardItems();
       const mobile = this.isMobile();
       const padding = mobile ? 8 : 15;
@@ -587,39 +501,41 @@ export class CrimeScene extends Scene {
 
     const bg = this.add.graphics();
     bg.fillStyle(0x1a1a2e, 0.98);
-    bg.fillRoundedRect(-panelW / 2, -70, panelW, 140, 8);
+    bg.fillRoundedRect(-panelW / 2, -80, panelW, 160, 8);
     bg.lineStyle(3, 0xff4444, 1);
-    bg.strokeRoundedRect(-panelW / 2, -70, panelW, 140, 8);
+    bg.strokeRoundedRect(-panelW / 2, -80, panelW, 160, 8);
     notification.add(bg);
 
-    // Red string decoration
     bg.lineStyle(2, 0xcc0000, 0.6);
-    bg.lineBetween(-panelW / 2 + 20, -60, panelW / 2 - 20, -60);
+    bg.lineBetween(-panelW / 2 + 20, -70, panelW / 2 - 20, -70);
 
-    notification.add(this.add.text(0, -45, 'EVIDENCE FOUND!', {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#ff4444',
-      resolution: 2,
-    }).setOrigin(0.5));
+    notification.add(createNoirText(this, 0, -55, 'EVIDENCE FOUND!', {
+      size: 'medium',
+      color: 'red',
+      origin: { x: 0.5, y: 0.5 },
+    }));
 
-    notification.add(this.add.text(0, -20, clue.name, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ffd700',
-      resolution: 2,
-    }).setOrigin(0.5));
+    notification.add(createNoirText(this, 0, -25, clue.name.toUpperCase(), {
+      size: 'medium',
+      color: 'gold',
+      origin: { x: 0.5, y: 0.5 },
+    }));
 
-    notification.add(this.add.text(0, 15, clue.description, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(9)}px`, color: '#cccccc',
-      wordWrap: { width: panelW - 30 }, align: 'center',
-      resolution: 2,
-    }).setOrigin(0.5));
+    notification.add(createNoirText(this, 0, 15, clue.description.toUpperCase(), {
+      size: 'small',
+      color: 'lightGray',
+      origin: { x: 0.5, y: 0.5 },
+      maxWidth: panelW - 30,
+      align: 1,
+    }));
 
-    const closeBtn = this.add.text(0, 50, '[TAP TO CLOSE]', {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#888888',
-      resolution: 2,
-    }).setOrigin(0.5);
-    notification.add(closeBtn);
+    notification.add(createNoirText(this, 0, 55, '[TAP TO CLOSE]', {
+      size: 'small',
+      color: 'gray',
+      origin: { x: 0.5, y: 0.5 },
+    }));
 
-    // Make the entire notification background clickable to close
-    bg.setInteractive(new Phaser.Geom.Rectangle(-panelW / 2, -70, panelW, 140), Phaser.Geom.Rectangle.Contains);
+    bg.setInteractive(new Phaser.Geom.Rectangle(-panelW / 2, -80, panelW, 160), Phaser.Geom.Rectangle.Contains);
     bg.on('pointerdown', () => notification.destroy());
   }
 
@@ -637,10 +553,11 @@ export class CrimeScene extends Scene {
     bg.strokeRoundedRect(-width / 2 + 10, -panelHeight / 2, width - 20, panelHeight, 5);
     this.infoPanel.add(bg);
 
-    const placeholder = this.add.text(0, 0, 'Tap evidence to examine...', {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#666666',
-      resolution: 2,
-    }).setOrigin(0.5);
+    const placeholder = createNoirText(this, 0, 0, 'TAP EVIDENCE TO EXAMINE...', {
+      size: 'small',
+      color: 'gray',
+      origin: { x: 0.5, y: 0.5 },
+    });
     this.infoPanel.add(placeholder);
   }
 
@@ -659,16 +576,20 @@ export class CrimeScene extends Scene {
     bg.strokeRoundedRect(-width / 2 + 10, -panelHeight / 2, width - 20, panelHeight, 5);
     this.infoPanel.add(bg);
 
-    this.infoPanel.add(this.add.text(0, mobile ? -15 : -20, title.toUpperCase(), {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ff4444',
-      resolution: 2,
-    }).setOrigin(0.5));
+    this.infoPanel.add(createNoirText(this, 0, mobile ? -15 : -18, title.toUpperCase(), {
+      size: 'small',
+      color: 'red',
+      origin: { x: 0.5, y: 0.5 },
+    }));
 
-    this.infoPanel.add(this.add.text(0, mobile ? 8 : 10, description, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#cccccc',
-      wordWrap: { width: width - 20 }, align: 'center',
-      resolution: 2,
-    }).setOrigin(0.5));
+    this.infoPanel.add(createNoirText(this, 0, mobile ? 10 : 12, description.toUpperCase(), {
+      size: 'small',
+      color: 'lightGray',
+      origin: { x: 0.5, y: 0.5 },
+      maxWidth: width - 40,
+      align: 1,
+      scale: 0.8,
+    }));
   }
 
   private createCluePanel(width: number, _height: number): void {
@@ -685,17 +606,20 @@ export class CrimeScene extends Scene {
     bg.strokeRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 5);
     this.cluePanel.add(bg);
 
-    this.cluePanel.add(this.add.text(0, mobile ? -8 : -10, 'EVIDENCE', {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(7)}px`, color: '#ff4444',
-      resolution: 2,
-    }).setOrigin(0.5));
+    this.cluePanel.add(createNoirText(this, 0, mobile ? -8 : -10, 'EVIDENCE', {
+      size: 'small',
+      color: 'red',
+      origin: { x: 0.5, y: 0.5 },
+      scale: 0.6,
+    }));
 
     const totalClues = this.currentCase?.clues.length || 0;
     const foundClues = this.progress?.cluesFound.length || 0;
-    this.foundCluesText = this.add.text(0, mobile ? 7 : 8, `${foundClues}/${totalClues}`, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ffffff',
-      resolution: 2,
-    }).setOrigin(0.5);
+    this.foundCluesText = createNoirText(this, 0, mobile ? 7 : 8, `${foundClues}/${totalClues}`, {
+      size: 'small',
+      color: 'white',
+      origin: { x: 0.5, y: 0.5 },
+    });
     this.cluePanel.add(this.foundCluesText);
   }
 
@@ -708,33 +632,23 @@ export class CrimeScene extends Scene {
 
   private createNavigationButtons(width: number, height: number): void {
     const mobile = this.isMobile();
-    const btnFontSize = this.getFontSize(10);
     const btnY = height - (mobile ? 18 : 22);
-    const btnPadding = mobile ? { x: 8, y: 5 } : { x: 12, y: 6 };
 
-    const interrogateBtn = this.add
-      .text(width / 2 - (mobile ? 55 : 90), btnY, mobile ? '[INTERROGATE]' : '[ INTERROGATE ]', {
-        fontFamily: 'Courier New', fontSize: `${btnFontSize}px`, color: '#00ff00',
-        backgroundColor: '#1a1a2e', padding: btnPadding,
-        resolution: 2,
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => interrogateBtn.setColor('#00ffff'))
-      .on('pointerout', () => interrogateBtn.setColor('#00ff00'))
-      .on('pointerdown', () => transitionToScene(this, 'Interrogation'));
+    createNoirButton(this, width / 2 - (mobile ? 60 : 100), btnY, mobile ? '[INTERROGATE]' : '[ INTERROGATE ]', {
+      size: 'small',
+      color: 'green',
+      hoverColor: 'cyan',
+      onClick: () => transitionToScene(this, 'Interrogation'),
+      padding: { x: 10, y: 8 },
+    });
 
-    const accuseBtn = this.add
-      .text(width / 2 + (mobile ? 55 : 90), btnY, mobile ? '[ACCUSE]' : '[ ACCUSE ]', {
-        fontFamily: 'Courier New', fontSize: `${btnFontSize}px`, color: '#ff4444',
-        backgroundColor: '#1a1a2e', padding: btnPadding,
-        resolution: 2,
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => accuseBtn.setColor('#ff8888'))
-      .on('pointerout', () => accuseBtn.setColor('#ff4444'))
-      .on('pointerdown', () => transitionToScene(this, 'Accusation'));
+    createNoirButton(this, width / 2 + (mobile ? 60 : 100), btnY, mobile ? '[ACCUSE]' : '[ ACCUSE ]', {
+      size: 'small',
+      color: 'red',
+      hoverColor: 'gold',
+      onClick: () => transitionToScene(this, 'Accusation'),
+      padding: { x: 10, y: 8 },
+    });
   }
 
   private handleResize(width: number, height: number): void {

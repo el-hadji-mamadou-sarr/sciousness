@@ -2,6 +2,7 @@ import { Scene, GameObjects } from 'phaser';
 import { Case, PlayerProgress, InitGameResponse } from '../../../shared/types/game';
 import { context } from '@devvit/web/client';
 import { transitionToScene } from '../utils/SceneTransition';
+import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
 
 // Admin usernames that can play unlimited times for testing
 const ADMIN_USERNAMES = ['ashscars'];
@@ -11,8 +12,8 @@ export class MainMenu extends Scene {
   private title: GameObjects.Text | null = null;
   private subtitle: GameObjects.Text | null = null;
   private caseTitle: GameObjects.Text | null = null;
-  private startButton: GameObjects.Text | null = null;
-  private viewResultButton: GameObjects.Text | null = null;
+  private startButton: GameObjects.Container | null = null;
+  private viewResultButton: GameObjects.Container | null = null;
   private instructions: GameObjects.Text | null = null;
   private footer: GameObjects.Text | null = null;
   private statusText: GameObjects.Text | null = null;
@@ -25,14 +26,8 @@ export class MainMenu extends Scene {
     super('MainMenu');
   }
 
-  private getFontSize(base: number): number {
-    const { width } = this.scale;
-    const scale = Math.min(width / 320, 1.5);
-    return Math.max(Math.floor(base * scale), Math.floor(base * 0.7), 10);
-  }
-
   private isMobile(): boolean {
-    return this.scale.width < 500;
+    return isMobileScreen(this);
   }
 
   init(): void {
@@ -63,7 +58,6 @@ export class MainMenu extends Scene {
       this.progress = data.progress;
     } catch (error) {
       console.error('Failed to load game data:', error);
-      // Use defaults - allow play
       this.progress = { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
     }
   }
@@ -74,7 +68,6 @@ export class MainMenu extends Scene {
   }
 
   private hasAlreadyPlayed(): boolean {
-    // Admins can always play for testing purposes
     if (this.isAdmin()) {
       return false;
     }
@@ -86,7 +79,6 @@ export class MainMenu extends Scene {
   }
 
   private async startGame(): Promise<void> {
-    // If admin has already played, reset their progress first
     if (this.isAdmin() && this.progress?.solved) {
       try {
         await fetch('/api/game/reset', { method: 'POST' });
@@ -127,52 +119,46 @@ export class MainMenu extends Scene {
 
     // Title
     if (!this.title) {
-      this.title = this.add.text(0, 0, 'REDDIT NOIR', {
-        fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(32)}px`,
-        color: '#ff4444',
-        stroke: '#000000',
-        strokeThickness: 4,
-        resolution: 2,
-      }).setOrigin(0.5);
+      this.title = createNoirText(this, width / 2, height * (mobile ? 0.14 : 0.16), 'REDDIT NOIR', {
+        size: 'xlarge',
+        color: 'red',
+        origin: { x: 0.5, y: 0.5 },
+      });
+    } else {
+      this.title.setPosition(width / 2, height * (mobile ? 0.14 : 0.16));
     }
-    this.title.setPosition(width / 2, height * (mobile ? 0.14 : 0.16));
-    this.title.setFontSize(this.getFontSize(32));
 
     // Subtitle
     if (!this.subtitle) {
-      this.subtitle = this.add.text(0, 0, 'The Daily Murder Mystery', {
-        fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(12)}px`,
-        color: '#888888',
-        resolution: 2,
-      }).setOrigin(0.5);
+      this.subtitle = createNoirText(this, width / 2, height * (mobile ? 0.22 : 0.24), 'THE DAILY MURDER MYSTERY', {
+        size: 'small',
+        color: 'gray',
+        origin: { x: 0.5, y: 0.5 },
+      });
+    } else {
+      this.subtitle.setPosition(width / 2, height * (mobile ? 0.22 : 0.24));
     }
-    this.subtitle.setPosition(width / 2, height * (mobile ? 0.22 : 0.24));
-    this.subtitle.setFontSize(this.getFontSize(12));
 
     // Decorative line
     this.noirBg.lineStyle(2, 0xff4444, 0.4);
     this.noirBg.lineBetween(width * 0.25, height * 0.29, width * 0.75, height * 0.29);
 
     // Case title
-    const caseTitleText = this.currentCase
-      ? `CASE #${String(this.currentCase.dayNumber).padStart(3, '0')}:\n${this.currentCase.title}`
-      : "CASE #001:\nThe Moderator's Last Ban";
+    const caseNum = this.currentCase?.dayNumber ?? 1;
+    const caseTitle = this.currentCase?.title ?? "THE MODERATOR'S LAST BAN";
+    const caseTitleText = `CASE #${String(caseNum).padStart(3, '0')}:\n${caseTitle.toUpperCase()}`;
+
     if (!this.caseTitle) {
-      this.caseTitle = this.add.text(0, 0, caseTitleText, {
-        fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(12)}px`,
-        color: '#ffd700',
-        align: 'center',
-        lineSpacing: 4,
-        resolution: 2,
-      }).setOrigin(0.5);
+      this.caseTitle = createNoirText(this, width / 2, height * (mobile ? 0.36 : 0.36), caseTitleText, {
+        size: 'small',
+        color: 'gold',
+        origin: { x: 0.5, y: 0.5 },
+        align: 1,
+      });
     } else {
       this.caseTitle.setText(caseTitleText);
+      this.caseTitle.setPosition(width / 2, height * (mobile ? 0.36 : 0.36));
     }
-    this.caseTitle.setPosition(width / 2, height * (mobile ? 0.36 : 0.36));
-    this.caseTitle.setFontSize(this.getFontSize(11));
 
     // Status badge for returning players
     if (alreadyPlayed) {
@@ -183,43 +169,30 @@ export class MainMenu extends Scene {
 
     // Footer
     if (!this.footer) {
-      this.footer = this.add.text(0, 0, 'A Reddit Devvit Game', {
-        fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(8)}px`,
-        color: '#333333',
-        resolution: 2,
-      }).setOrigin(0.5);
+      this.footer = createNoirText(this, width / 2, height - 20, 'A REDDIT DEVVIT GAME', {
+        size: 'small',
+        color: 'darkGray',
+        origin: { x: 0.5, y: 0.5 },
+        scale: 0.7,
+      });
+    } else {
+      this.footer.setPosition(width / 2, height - 20);
     }
-    this.footer.setPosition(width / 2, height - 12);
-    this.footer.setFontSize(this.getFontSize(8));
   }
 
   private createNewPlayerUI(width: number, height: number, mobile: boolean): void {
     // Start button
     if (!this.startButton) {
-      this.startButton = this.add.text(0, 0, '[START]', {
-        fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(18)}px`,
-        color: '#00ff00',
-        backgroundColor: '#1a1a2e',
-        padding: { x: 20, y: 10 },
-        resolution: 2,
-      }).setOrigin(0.5)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerover', () => {
-          this.startButton?.setColor('#00ffff');
-          this.startButton?.setStyle({ backgroundColor: '#2a2a4e' });
-        })
-        .on('pointerout', () => {
-          this.startButton?.setColor('#00ff00');
-          this.startButton?.setStyle({ backgroundColor: '#1a1a2e' });
-        })
-        .on('pointerdown', () => {
-          this.startGame();
-        });
+      this.startButton = createNoirButton(this, width / 2, height * (mobile ? 0.52 : 0.52), '[ START ]', {
+        size: 'large',
+        color: 'green',
+        hoverColor: 'cyan',
+        onClick: () => this.startGame(),
+        padding: { x: 30, y: 15 },
+      });
+    } else {
+      this.startButton.setPosition(width / 2, height * (mobile ? 0.52 : 0.52));
     }
-    this.startButton.setPosition(width / 2, height * (mobile ? 0.52 : 0.52));
-    this.startButton.setFontSize(this.getFontSize(18));
     this.startButton.setVisible(true);
 
     // Hide view result button if it exists
@@ -235,21 +208,18 @@ export class MainMenu extends Scene {
 
     // Instructions
     const instructionText = mobile
-      ? 'Tap clues • Interrogate • Solve'
-      : 'Examine clues • Interrogate suspects • Solve the case';
+      ? 'TAP CLUES - INTERROGATE - SOLVE'
+      : 'EXAMINE CLUES - INTERROGATE SUSPECTS - SOLVE THE CASE';
     if (!this.instructions) {
-      this.instructions = this.add.text(0, 0, instructionText, {
-        fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(9)}px`,
-        color: '#555555',
-        align: 'center',
-        resolution: 2,
-      }).setOrigin(0.5);
+      this.instructions = createNoirText(this, width / 2, height * (mobile ? 0.68 : 0.68), instructionText, {
+        size: 'small',
+        color: 'darkGray',
+        origin: { x: 0.5, y: 0.5 },
+      });
     } else {
       this.instructions.setText(instructionText);
+      this.instructions.setPosition(width / 2, height * (mobile ? 0.68 : 0.68));
     }
-    this.instructions.setPosition(width / 2, height * (mobile ? 0.68 : 0.68));
-    this.instructions.setFontSize(this.getFontSize(9));
     this.instructions.setVisible(true);
   }
 
@@ -276,70 +246,50 @@ export class MainMenu extends Scene {
     this.statusBadge.lineStyle(3, wasCorrect ? 0x00ff00 : 0xff4444, 0.9);
     this.statusBadge.strokeRoundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 10);
 
-    // Status text - larger for mobile
+    // Status text
     const statusMessage = wasCorrect
-      ? '✓ CASE SOLVED\nYou caught the killer!'
-      : '✗ CASE FAILED\nThe killer got away...';
+      ? 'CASE SOLVED\nYOU CAUGHT THE KILLER!'
+      : 'CASE FAILED\nTHE KILLER GOT AWAY...';
 
     if (!this.statusText) {
-      this.statusText = this.add.text(0, 0, statusMessage, {
-        fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(16)}px`,
-        color: wasCorrect ? '#00ff00' : '#ff4444',
-        align: 'center',
-        lineSpacing: 8,
-        resolution: 2,
-      }).setOrigin(0.5);
+      this.statusText = createNoirText(this, width / 2, badgeY + badgeHeight / 2, statusMessage, {
+        size: 'medium',
+        color: wasCorrect ? 'green' : 'red',
+        origin: { x: 0.5, y: 0.5 },
+        align: 1,
+      });
     } else {
       this.statusText.setText(statusMessage);
-      this.statusText.setColor(wasCorrect ? '#00ff00' : '#ff4444');
+      this.statusText.setPosition(width / 2, badgeY + badgeHeight / 2);
     }
-    this.statusText.setPosition(width / 2, badgeY + badgeHeight / 2);
-    this.statusText.setFontSize(this.getFontSize(16));
     this.statusText.setVisible(true);
 
-    // View Result button - larger and more prominent for mobile
+    // View Result button
     if (!this.viewResultButton) {
-      this.viewResultButton = this.add.text(0, 0, '[ VIEW RESULT ]', {
-        fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(18)}px`,
-        color: '#ffd700',
-        backgroundColor: '#1a1a2e',
-        padding: { x: mobile ? 20 : 18, y: mobile ? 12 : 10 },
-        resolution: 2,
-      }).setOrigin(0.5)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerover', () => {
-          this.viewResultButton?.setColor('#ffff00');
-          this.viewResultButton?.setStyle({ backgroundColor: '#2a2a4e' });
-        })
-        .on('pointerout', () => {
-          this.viewResultButton?.setColor('#ffd700');
-          this.viewResultButton?.setStyle({ backgroundColor: '#1a1a2e' });
-        })
-        .on('pointerdown', () => {
-          this.goToResultScreen();
-        });
+      this.viewResultButton = createNoirButton(this, width / 2, height * (mobile ? 0.70 : 0.70), '[ VIEW RESULT ]', {
+        size: 'large',
+        color: 'gold',
+        hoverColor: 'white',
+        onClick: () => this.goToResultScreen(),
+        padding: { x: 25, y: 15 },
+      });
+    } else {
+      this.viewResultButton.setPosition(width / 2, height * (mobile ? 0.70 : 0.70));
     }
-    this.viewResultButton.setPosition(width / 2, height * (mobile ? 0.70 : 0.70));
-    this.viewResultButton.setFontSize(this.getFontSize(18));
     this.viewResultButton.setVisible(true);
 
     // Update instructions for returning players
-    const instructionText = 'Come back tomorrow for a new case!';
+    const instructionText = 'COME BACK TOMORROW FOR A NEW CASE!';
     if (!this.instructions) {
-      this.instructions = this.add.text(0, 0, instructionText, {
-        fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(11)}px`,
-        color: '#666666',
-        align: 'center',
-        resolution: 2,
-      }).setOrigin(0.5);
+      this.instructions = createNoirText(this, width / 2, height * (mobile ? 0.82 : 0.82), instructionText, {
+        size: 'small',
+        color: 'gray',
+        origin: { x: 0.5, y: 0.5 },
+      });
     } else {
       this.instructions.setText(instructionText);
+      this.instructions.setPosition(width / 2, height * (mobile ? 0.82 : 0.82));
     }
-    this.instructions.setPosition(width / 2, height * (mobile ? 0.82 : 0.82));
-    this.instructions.setFontSize(this.getFontSize(11));
     this.instructions.setVisible(true);
   }
 
@@ -349,7 +299,6 @@ export class MainMenu extends Scene {
     const guiltySuspect = this.currentCase.suspects.find(s => s.isGuilty);
     const accusedSuspect = this.currentCase.suspects.find(s => s.id === this.progress?.accusedSuspect);
 
-    // Get evidence linked to guilty suspect
     const linkedClues = this.currentCase.clues.filter(c => c.linkedTo === guiltySuspect?.id);
     const evidence = linkedClues.map(c => c.name);
 

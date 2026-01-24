@@ -15,13 +15,16 @@ const config: Phaser.Types.Core.GameConfig = {
   type: AUTO,
   parent: 'game-container',
   backgroundColor: '#0a0a14',
+  // Fix canvas resolution for crisp rendering on high-DPI displays
+  resolution: window.devicePixelRatio,
+  // Disable pixel rounding for better thin stroke rendering in fonts
+  roundPixels: false,
+  pixelArt: false,
   scale: {
-    // Keep a fixed game resolution but automatically scale it to fit within the available
-    // web-view / device while maintaining aspect ratio.
-    mode: Phaser.Scale.RESIZE,
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 1024,
-    height: 768,
+    width: 360,
+    height: 640,
   },
   scene: [Boot, Preloader, Loading, MainMenu, CrimeScene, Interrogation, Accusation, GameOver],
 };

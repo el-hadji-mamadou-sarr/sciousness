@@ -10,6 +10,7 @@ import {
 import { case1 } from './crime-scenes/case1';
 import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
 import { transitionToScene } from '../utils/SceneTransition';
+import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
 
 export class Interrogation extends Scene {
   private currentCase: Case | null = null;
@@ -23,18 +24,9 @@ export class Interrogation extends Scene {
     super('Interrogation');
   }
 
-  private getFontSize(base: number): number {
-    const { width } = this.scale;
-    // Use 320px as reference for mobile, scale up from there
-    const scale = Math.min(width / 320, 1.5);
-    // Ensure minimum readable size (at least 70% of base, minimum 10px)
-    return Math.max(Math.floor(base * scale), Math.floor(base * 0.7), 10);
-  }
-
   private isMobile(): boolean {
-    return this.scale.width < 500;
+    return isMobileScreen(this);
   }
-  
 
   async create() {
     const { width, height } = this.scale;
@@ -42,16 +34,11 @@ export class Interrogation extends Scene {
     this.cameras.main.setBackgroundColor(0x0f0f1a);
     this.createScanlines(width, height);
 
-    // Title
-    this.add
-      .text(width / 2, this.isMobile() ? 18 : 25, 'INTERROGATION', {
-        fontFamily: 'Courier New',
-        fontSize: `${this.getFontSize(18)}px`,
-        color: '#ff4444',
-        stroke: '#000000',
-        strokeThickness: 2,
-      })
-      .setOrigin(0.5);
+    createNoirText(this, width / 2, this.isMobile() ? 18 : 25, 'INTERROGATION', {
+      size: 'large',
+      color: 'red',
+      origin: { x: 0.5, y: 0.5 },
+    });
 
     await this.loadGameData();
 
@@ -86,7 +73,6 @@ export class Interrogation extends Scene {
   }
 
   private createFallbackCase(): void {
-    // Use the case1 data from the crime-scenes folder
     this.currentCase = { ...case1 };
     this.progress = { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
   }
@@ -113,7 +99,6 @@ export class Interrogation extends Scene {
     const panelWidth = width - (mobile ? 16 : 60);
     const panelHeight = mobile ? 150 : 130;
 
-    // Background
     const bg = this.add.graphics();
     bg.fillStyle(0x1a1a2e, 0.95);
     bg.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 6);
@@ -121,7 +106,6 @@ export class Interrogation extends Scene {
     bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 6);
     this.suspectPanel.add(bg);
 
-    // Portrait - using procedural graphics generator
     const portraitSize = mobile ? 50 : 65;
     const portrait = this.add.graphics();
     const portraitX = -panelWidth / 2 + 10 + portraitSize / 2;
@@ -131,55 +115,63 @@ export class Interrogation extends Scene {
 
     const textX = -panelWidth / 2 + portraitSize + 25;
 
-    // Name
-    this.suspectPanel.add(this.add.text(textX, -panelHeight / 2 + 12, suspect.name, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(16)}px`, color: '#ffffff',
-      resolution: 2,
+    this.suspectPanel.add(createNoirText(this, textX, -panelHeight / 2 + 15, suspect.name.toUpperCase(), {
+      size: 'medium',
+      color: 'white',
+      origin: { x: 0, y: 0 },
     }));
 
-    // Description
-    this.suspectPanel.add(this.add.text(textX, -panelHeight / 2 + 38, suspect.description, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#aaaaaa',
-      wordWrap: { width: panelWidth - portraitSize - 40 },
-      resolution: 2,
+    this.suspectPanel.add(createNoirText(this, textX, -panelHeight / 2 + 42, suspect.description.toUpperCase(), {
+      size: 'small',
+      color: 'gray',
+      origin: { x: 0, y: 0 },
+      maxWidth: panelWidth - portraitSize - 40,
+      scale: 0.7,
     }));
 
-    // Alibi - positioned in lower section
-    this.suspectPanel.add(this.add.text(-panelWidth / 2 + 12, panelHeight / 2 - 50, 'ALIBI:', {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ff4444',
-      resolution: 2,
-    }));
-    this.suspectPanel.add(this.add.text(-panelWidth / 2 + 75, panelHeight / 2 - 50, suspect.alibi, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#cccccc',
-      wordWrap: { width: panelWidth - 95 },
-      resolution: 2,
+    this.suspectPanel.add(createNoirText(this, -panelWidth / 2 + 12, panelHeight / 2 - 50, 'ALIBI:', {
+      size: 'small',
+      color: 'red',
+      origin: { x: 0, y: 0 },
     }));
 
-    // Navigation
+    this.suspectPanel.add(createNoirText(this, -panelWidth / 2 + 75, panelHeight / 2 - 50, suspect.alibi.toUpperCase(), {
+      size: 'small',
+      color: 'lightGray',
+      origin: { x: 0, y: 0 },
+      maxWidth: panelWidth - 95,
+      scale: 0.7,
+    }));
+
     const navY = panelHeight / 2 - 18;
-    const prevBtn = this.add
-      .text(-panelWidth / 2 + 10, navY, '<', {
-        fontFamily: 'Courier New', fontSize: `${this.getFontSize(20)}px`,
-        color: index > 0 ? '#00ff00' : '#333333',
-      })
-      .setInteractive({ useHandCursor: index > 0 })
-      .on('pointerdown', () => { if (index > 0) this.showSuspect(index - 1); });
-    this.suspectPanel.add(prevBtn);
 
-    this.suspectPanel.add(this.add.text(0, navY, `${index + 1}/${suspects.length}`, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#666666',
-      resolution: 2,
-    }).setOrigin(0.5));
+    if (index > 0) {
+      const prevBtn = createNoirText(this, -panelWidth / 2 + 10, navY, '<', {
+        size: 'medium',
+        color: 'green',
+        origin: { x: 0, y: 0 },
+      });
+      prevBtn.setInteractive({ useHandCursor: true });
+      prevBtn.on('pointerdown', () => this.showSuspect(index - 1));
+      this.suspectPanel.add(prevBtn);
+    }
 
-    const nextBtn = this.add
-      .text(panelWidth / 2 - 10, navY, '>', {
-        fontFamily: 'Courier New', fontSize: `${this.getFontSize(20)}px`,
-        color: index < suspects.length - 1 ? '#00ff00' : '#333333',
-      })
-      .setOrigin(1, 0)
-      .setInteractive({ useHandCursor: index < suspects.length - 1 })
-      .on('pointerdown', () => { if (index < suspects.length - 1) this.showSuspect(index + 1); });
-    this.suspectPanel.add(nextBtn);
+    this.suspectPanel.add(createNoirText(this, 0, navY, `${index + 1}/${suspects.length}`, {
+      size: 'small',
+      color: 'gray',
+      origin: { x: 0.5, y: 0 },
+    }));
+
+    if (index < suspects.length - 1) {
+      const nextBtn = createNoirText(this, panelWidth / 2 - 20, navY, '>', {
+        size: 'medium',
+        color: 'green',
+        origin: { x: 0, y: 0 },
+      });
+      nextBtn.setInteractive({ useHandCursor: true });
+      nextBtn.on('pointerdown', () => this.showSuspect(index + 1));
+      this.suspectPanel.add(nextBtn);
+    }
 
     this.currentDialogueOptions = suspect.dialogueOptions.filter(
       (opt) => !opt.id.includes('_2') && !opt.id.includes('_3') && !opt.id.includes('_4')
@@ -209,29 +201,30 @@ export class Interrogation extends Scene {
     bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 6);
     this.dialogueContainer.add(bg);
 
-    this.dialogueContainer.add(this.add.text(0, -panelHeight / 2 + 12, 'What to ask?', {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#ffd700',
-      resolution: 2,
-    }).setOrigin(0.5));
+    this.dialogueContainer.add(createNoirText(this, 0, -panelHeight / 2 + 15, 'WHAT TO ASK?', {
+      size: 'small',
+      color: 'gold',
+      origin: { x: 0.5, y: 0 },
+    }));
 
-    let yOffset = -panelHeight / 2 + 40;
+    let yOffset = -panelHeight / 2 + 45;
     const options = this.currentDialogueOptions.length > 0
       ? this.currentDialogueOptions
       : this.currentSuspect.dialogueOptions.slice(0, 3);
 
     options.forEach((option, idx) => {
-      const optionText = this.add
-        .text(-panelWidth / 2 + 15, yOffset, `${idx + 1}. ${option.text}`, {
-          fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#00ccff',
-          wordWrap: { width: panelWidth - 30 },
-          resolution: 2,
-        })
-        .setInteractive({ useHandCursor: true })
-        .on('pointerover', () => optionText.setColor('#ffffff'))
-        .on('pointerout', () => optionText.setColor('#00ccff'))
-        .on('pointerdown', () => this.selectDialogue(option));
+      const optionText = createNoirText(this, -panelWidth / 2 + 15, yOffset, `${idx + 1}. ${option.text.toUpperCase()}`, {
+        size: 'small',
+        color: 'cyan',
+        origin: { x: 0, y: 0 },
+        maxWidth: panelWidth - 30,
+      });
+      optionText.setInteractive({ useHandCursor: true });
+      optionText.on('pointerover', () => optionText.setTint(0xffffff));
+      optionText.on('pointerout', () => optionText.clearTint());
+      optionText.on('pointerdown', () => this.selectDialogue(option));
       this.dialogueContainer!.add(optionText);
-      yOffset += mobile ? 40 : 45;
+      yOffset += mobile ? 45 : 50;
     });
   }
 
@@ -252,54 +245,50 @@ export class Interrogation extends Scene {
     bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 6);
     this.dialogueContainer.add(bg);
 
-    // Your question
-    this.dialogueContainer.add(this.add.text(-panelWidth / 2 + 12, -panelHeight / 2 + 15, 'YOU:', {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#00ff00',
-      resolution: 2,
+    this.dialogueContainer.add(createNoirText(this, -panelWidth / 2 + 12, -panelHeight / 2 + 15, 'YOU:', {
+      size: 'small',
+      color: 'green',
+      origin: { x: 0, y: 0 },
     }));
 
-    this.dialogueContainer.add(this.add.text(-panelWidth / 2 + 12, -panelHeight / 2 + 32, `"${option.text}"`, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(13)}px`, color: '#ffffff',
-      fontStyle: 'italic', wordWrap: { width: panelWidth - 24 },
-      resolution: 2,
+    this.dialogueContainer.add(createNoirText(this, -panelWidth / 2 + 12, -panelHeight / 2 + 35, `"${option.text.toUpperCase()}"`, {
+      size: 'small',
+      color: 'white',
+      origin: { x: 0, y: 0 },
+      maxWidth: panelWidth - 24,
     }));
 
-    // Response
-    const responseY = -panelHeight / 2 + (mobile ? 70 : 85);
-    this.dialogueContainer.add(this.add.text(-panelWidth / 2 + 12, responseY, `${this.currentSuspect.name}:`, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`,
-      color: option.isSuspicious ? '#ff4444' : '#ffff00',
-      resolution: 2,
+    const responseY = -panelHeight / 2 + (mobile ? 75 : 90);
+    this.dialogueContainer.add(createNoirText(this, -panelWidth / 2 + 12, responseY, `${this.currentSuspect.name.toUpperCase()}:`, {
+      size: 'small',
+      color: option.isSuspicious ? 'red' : 'gold',
+      origin: { x: 0, y: 0 },
     }));
 
-    this.dialogueContainer.add(this.add.text(-panelWidth / 2 + 12, responseY + 18, `"${option.response}"`, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(13)}px`, color: '#cccccc',
-      fontStyle: 'italic', wordWrap: { width: panelWidth - 24 },
-      resolution: 2,
+    this.dialogueContainer.add(createNoirText(this, -panelWidth / 2 + 12, responseY + 22, `"${option.response.toUpperCase()}"`, {
+      size: 'small',
+      color: 'lightGray',
+      origin: { x: 0, y: 0 },
+      maxWidth: panelWidth - 24,
     }));
 
     if (option.isSuspicious) {
-      this.dialogueContainer.add(this.add.text(panelWidth / 2 - 15, -panelHeight / 2 + 15, 'SUSPICIOUS', {
-        fontFamily: 'Courier New', fontSize: `${this.getFontSize(11)}px`, color: '#ff4444',
-        resolution: 2,
-      }).setOrigin(1, 0));
+      this.dialogueContainer.add(createNoirText(this, panelWidth / 2 - 15, -panelHeight / 2 + 15, 'SUSPICIOUS', {
+        size: 'small',
+        color: 'red',
+        origin: { x: 1, y: 0 },
+      }));
     }
 
     if (option.unlocksClue) {
       await this.findClue(option.unlocksClue);
     }
 
-    // Continue button
-    const continueBtn = this.add
-      .text(0, panelHeight / 2 - 25, '[CONTINUE]', {
-        fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#00ff00',
-        backgroundColor: '#1a1a2e', padding: { x: 14, y: 8 },
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => continueBtn.setColor('#00ffff'))
-      .on('pointerout', () => continueBtn.setColor('#00ff00'))
-      .on('pointerdown', () => {
+    const continueBtn = createNoirButton(this, 0, panelHeight / 2 - 30, '[CONTINUE]', {
+      size: 'small',
+      color: 'green',
+      hoverColor: 'cyan',
+      onClick: () => {
         if (option.nextOptions && this.currentSuspect) {
           this.currentDialogueOptions = this.currentSuspect.dialogueOptions.filter((opt) =>
             option.nextOptions!.includes(opt.id)
@@ -308,7 +297,9 @@ export class Interrogation extends Scene {
           this.currentDialogueOptions = [];
         }
         this.showDialogueOptions();
-      });
+      },
+      padding: { x: 15, y: 8 },
+    });
     this.dialogueContainer.add(continueBtn);
   }
 
@@ -332,13 +323,12 @@ export class Interrogation extends Scene {
 
   private showClueNotification(clueName: string): void {
     const { width } = this.scale;
-    const notification = this.add
-      .text(width / 2, this.isMobile() ? 38 : 50, `NEW CLUE: ${clueName}`, {
-        fontFamily: 'Courier New', fontSize: `${this.getFontSize(13)}px`, color: '#ffd700',
-        backgroundColor: '#1a1a2e', padding: { x: 12, y: 6 },
-      })
-      .setOrigin(0.5)
-      .setAlpha(0);
+    const notification = createNoirText(this, width / 2, this.isMobile() ? 42 : 55, `NEW CLUE: ${clueName.toUpperCase()}`, {
+      size: 'small',
+      color: 'gold',
+      origin: { x: 0.5, y: 0.5 },
+    });
+    notification.setAlpha(0);
 
     this.tweens.add({
       targets: notification,
@@ -353,29 +343,21 @@ export class Interrogation extends Scene {
   private createNavigationButtons(width: number, height: number): void {
     const mobile = this.isMobile();
     const btnY = height - (mobile ? 18 : 22);
-    const fontSize = this.getFontSize(14);
-    const padding = mobile ? { x: 10, y: 6 } : { x: 12, y: 8 };
 
-    const backBtn = this.add
-      .text(width / 2 - (mobile ? 70 : 110), btnY, '[SCENE]', {
-        fontFamily: 'Courier New', fontSize: `${fontSize}px`, color: '#888888',
-        backgroundColor: '#1a1a2e', padding,
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => backBtn.setColor('#ffffff'))
-      .on('pointerout', () => backBtn.setColor('#888888'))
-      .on('pointerdown', () => transitionToScene(this, 'CrimeScene'));
+    createNoirButton(this, width / 2 - (mobile ? 70 : 110), btnY, '[SCENE]', {
+      size: 'small',
+      color: 'gray',
+      hoverColor: 'white',
+      onClick: () => transitionToScene(this, 'CrimeScene'),
+      padding: { x: 12, y: 8 },
+    });
 
-    const accuseBtn = this.add
-      .text(width / 2 + (mobile ? 70 : 110), btnY, '[ACCUSE]', {
-        fontFamily: 'Courier New', fontSize: `${fontSize}px`, color: '#ff4444',
-        backgroundColor: '#1a1a2e', padding,
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => accuseBtn.setColor('#ff8888'))
-      .on('pointerout', () => accuseBtn.setColor('#ff4444'))
-      .on('pointerdown', () => transitionToScene(this, 'Accusation'));
+    createNoirButton(this, width / 2 + (mobile ? 70 : 110), btnY, '[ACCUSE]', {
+      size: 'small',
+      color: 'red',
+      hoverColor: 'gold',
+      onClick: () => transitionToScene(this, 'Accusation'),
+      padding: { x: 12, y: 8 },
+    });
   }
 }

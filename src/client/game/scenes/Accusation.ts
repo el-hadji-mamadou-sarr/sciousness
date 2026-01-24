@@ -3,6 +3,7 @@ import { Case, Suspect, PlayerProgress, InitGameResponse, AccuseResponse } from 
 import { case1 } from './crime-scenes/case1';
 import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
 import { transitionToScene } from '../utils/SceneTransition';
+import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
 
 export class Accusation extends Scene {
   private currentCase: Case | null = null;
@@ -15,16 +16,8 @@ export class Accusation extends Scene {
     super('Accusation');
   }
 
-  private getFontSize(base: number): number {
-    const { width } = this.scale;
-    // Use 320px as reference for mobile, scale up from there
-    const scale = Math.min(width / 320, 1.5);
-    // Ensure minimum readable size (at least 70% of base, minimum 10px)
-    return Math.max(Math.floor(base * scale), Math.floor(base * 0.7), 10);
-  }
-
   private isMobile(): boolean {
-    return this.scale.width < 500;
+    return isMobileScreen(this);
   }
 
   async create() {
@@ -33,20 +26,17 @@ export class Accusation extends Scene {
     this.cameras.main.setBackgroundColor(0x0a0a14);
     this.createScanlines(width, height);
 
-    const mobile = this.isMobile();
+    createNoirText(this, width / 2, this.isMobile() ? 18 : 28, 'ACCUSATION', {
+      size: 'large',
+      color: 'red',
+      origin: { x: 0.5, y: 0.5 },
+    });
 
-    // Title
-    this.add.text(width / 2, mobile ? 18 : 28, 'ACCUSATION', {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(18)}px`,
-      color: '#ff4444', stroke: '#000000', strokeThickness: 2,
-      resolution: 2,
-    }).setOrigin(0.5);
-
-    // Warning
-    this.add.text(width / 2, mobile ? 38 : 55, 'One chance only!', {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#ffff00',
-      resolution: 2,
-    }).setOrigin(0.5);
+    createNoirText(this, width / 2, this.isMobile() ? 42 : 55, 'ONE CHANCE ONLY!', {
+      size: 'small',
+      color: 'gold',
+      origin: { x: 0.5, y: 0.5 },
+    });
 
     await this.loadGameData();
 
@@ -80,7 +70,6 @@ export class Accusation extends Scene {
   }
 
   private createFallbackCase(): void {
-    // Use the case1 data from the crime-scenes folder
     this.currentCase = { ...case1 };
     this.progress = { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
   }
@@ -90,7 +79,7 @@ export class Accusation extends Scene {
 
     const mobile = this.isMobile();
     const suspects = this.currentCase.suspects;
-    const startY = mobile ? 60 : 90;
+    const startY = mobile ? 65 : 90;
     const cardHeight = mobile ? 70 : 90;
     const cardSpacing = mobile ? 8 : 15;
 
@@ -115,7 +104,6 @@ export class Accusation extends Scene {
     bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
     container.add(bg);
 
-    // Portrait - using procedural graphics generator
     const portraitSize = mobile ? 40 : 55;
     const portrait = this.add.graphics();
     const portraitX = -cardWidth / 2 + 8 + portraitSize / 2;
@@ -125,43 +113,28 @@ export class Accusation extends Scene {
 
     const textX = -cardWidth / 2 + portraitSize + 18;
 
-    container.add(this.add.text(textX, 10, suspect.name, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ffffff',
-      resolution: 2,
+    container.add(createNoirText(this, textX, 12, suspect.name.toUpperCase(), {
+      size: 'small',
+      color: 'white',
+      origin: { x: 0, y: 0 },
     }));
 
-    container.add(this.add.text(textX, mobile ? 28 : 32, suspect.description, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(8)}px`, color: '#888888',
-      wordWrap: { width: cardWidth - portraitSize - (mobile ? 80 : 100) },
-      resolution: 2,
+    container.add(createNoirText(this, textX, mobile ? 32 : 38, suspect.description.toUpperCase(), {
+      size: 'small',
+      color: 'gray',
+      origin: { x: 0, y: 0 },
+      maxWidth: cardWidth - portraitSize - (mobile ? 90 : 110),
+      scale: 0.6,
     }));
 
     // Accuse button
-    const accuseBtn = this.add
-      .text(cardWidth / 2 - 12, cardHeight / 2, 'ACCUSE', {
-        fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#ff4444',
-        backgroundColor: '#2a1a1a', padding: { x: 8, y: 5 },
-        resolution: 2,
-      })
-      .setOrigin(1, 0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => {
-        accuseBtn.setColor('#ff8888');
-        bg.clear();
-        bg.fillStyle(0x1e2a4a, 0.95);
-        bg.fillRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
-        bg.lineStyle(2, 0xff4444, 1);
-        bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
-      })
-      .on('pointerout', () => {
-        accuseBtn.setColor('#ff4444');
-        bg.clear();
-        bg.fillStyle(0x16213e, 0.9);
-        bg.fillRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
-        bg.lineStyle(2, 0x394867, 1);
-        bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
-      })
-      .on('pointerdown', () => this.showConfirmation(suspect));
+    const accuseBtn = createNoirButton(this, cardWidth / 2 - 45, cardHeight / 2, 'ACCUSE', {
+      size: 'small',
+      color: 'red',
+      hoverColor: 'gold',
+      onClick: () => this.showConfirmation(suspect),
+      padding: { x: 10, y: 6 },
+    });
     container.add(accuseBtn);
 
     return container;
@@ -184,20 +157,23 @@ export class Accusation extends Scene {
     bg.strokeRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 6);
     container.add(bg);
 
-    container.add(this.add.text(0, 12, `EVIDENCE: ${this.progress.cluesFound.length}/${this.currentCase.clues.length}`, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#ffd700',
-      resolution: 2,
-    }).setOrigin(0.5));
+    container.add(createNoirText(this, 0, 12, `EVIDENCE: ${this.progress.cluesFound.length}/${this.currentCase.clues.length}`, {
+      size: 'small',
+      color: 'gold',
+      origin: { x: 0.5, y: 0 },
+    }));
 
     const foundClues = this.currentCase.clues.filter((c) => this.progress!.cluesFound.includes(c.id));
     let clueText = foundClues.length > 0
-      ? foundClues.map((c) => `• ${c.name}`).join(mobile ? ', ' : '\n')
-      : 'No clues yet!';
+      ? foundClues.map((c) => `- ${c.name.toUpperCase()}`).join(mobile ? ', ' : '\n')
+      : 'NO CLUES YET!';
 
-    container.add(this.add.text(-panelWidth / 2 + 12, 28, clueText, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(8)}px`, color: '#aaaaaa',
-      wordWrap: { width: panelWidth - 24 },
-      resolution: 2,
+    container.add(createNoirText(this, -panelWidth / 2 + 12, 30, clueText, {
+      size: 'small',
+      color: 'gray',
+      origin: { x: 0, y: 0 },
+      maxWidth: panelWidth - 24,
+      scale: 0.7,
     }));
   }
 
@@ -216,15 +192,13 @@ export class Accusation extends Scene {
     const { width, height } = this.scale;
     const mobile = this.isMobile();
     const panelWidth = mobile ? width - 40 : 320;
-    const panelHeight = mobile ? 160 : 180;
+    const panelHeight = mobile ? 170 : 190;
 
-    // Dim background
     const dimBg = this.add.graphics();
     dimBg.fillStyle(0x000000, 0.7);
     dimBg.fillRect(-width / 2, -height / 2, width, height);
     this.confirmPanel.add(dimBg);
 
-    // Panel
     const bg = this.add.graphics();
     bg.fillStyle(0x1a1a2e, 1);
     bg.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 8);
@@ -232,47 +206,41 @@ export class Accusation extends Scene {
     bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 8);
     this.confirmPanel.add(bg);
 
-    this.confirmPanel.add(this.add.text(0, -panelHeight / 2 + 20, 'CONFIRM', {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(14)}px`, color: '#ff4444',
-      resolution: 2,
-    }).setOrigin(0.5));
+    this.confirmPanel.add(createNoirText(this, 0, -panelHeight / 2 + 25, 'CONFIRM ACCUSATION', {
+      size: 'medium',
+      color: 'red',
+      origin: { x: 0.5, y: 0.5 },
+    }));
 
-    this.confirmPanel.add(this.add.text(0, -10, `Accuse ${suspect.name}?`, {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ffffff',
-      resolution: 2,
-    }).setOrigin(0.5));
+    this.confirmPanel.add(createNoirText(this, 0, -10, `ACCUSE ${suspect.name.toUpperCase()}?`, {
+      size: 'small',
+      color: 'white',
+      origin: { x: 0.5, y: 0.5 },
+    }));
 
-    this.confirmPanel.add(this.add.text(0, 15, 'Cannot be undone!', {
-      fontFamily: 'Courier New', fontSize: `${this.getFontSize(9)}px`, color: '#ffff00',
-      resolution: 2,
-    }).setOrigin(0.5));
+    this.confirmPanel.add(createNoirText(this, 0, 15, 'CANNOT BE UNDONE!', {
+      size: 'small',
+      color: 'gold',
+      origin: { x: 0.5, y: 0.5 },
+    }));
 
-    const btnY = panelHeight / 2 - 30;
-    const confirmBtn = this.add
-      .text(-50, btnY, '[YES]', {
-        fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#ff4444',
-        backgroundColor: '#2a1a1a', padding: { x: 10, y: 6 },
-        resolution: 2,
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => confirmBtn.setColor('#ff8888'))
-      .on('pointerout', () => confirmBtn.setColor('#ff4444'))
-      .on('pointerdown', () => this.makeAccusation());
-    this.confirmPanel.add(confirmBtn);
+    const btnY = panelHeight / 2 - 35;
 
-    const cancelBtn = this.add
-      .text(50, btnY, '[NO]', {
-        fontFamily: 'Courier New', fontSize: `${this.getFontSize(12)}px`, color: '#888888',
-        backgroundColor: '#1a1a1a', padding: { x: 10, y: 6 },
-        resolution: 2,
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => cancelBtn.setColor('#ffffff'))
-      .on('pointerout', () => cancelBtn.setColor('#888888'))
-      .on('pointerdown', () => this.hideConfirmation());
-    this.confirmPanel.add(cancelBtn);
+    this.confirmPanel.add(createNoirButton(this, -55, btnY, '[YES]', {
+      size: 'small',
+      color: 'red',
+      hoverColor: 'gold',
+      onClick: () => this.makeAccusation(),
+      padding: { x: 15, y: 8 },
+    }));
+
+    this.confirmPanel.add(createNoirButton(this, 55, btnY, '[NO]', {
+      size: 'small',
+      color: 'gray',
+      hoverColor: 'white',
+      onClick: () => this.hideConfirmation(),
+      padding: { x: 15, y: 8 },
+    }));
 
     this.confirmPanel.setVisible(true);
   }
@@ -311,7 +279,6 @@ export class Accusation extends Scene {
     const guiltySuspect = this.currentCase.suspects.find(s => s.isGuilty);
     if (!guiltySuspect) return [];
 
-    // Find clues linked to the guilty suspect
     const linkedClues = this.currentCase.clues.filter(c => c.linkedTo === guiltySuspect.id);
     return linkedClues.map(c => c.name);
   }
@@ -319,7 +286,6 @@ export class Accusation extends Scene {
   private showResult(correct: boolean): void {
     const guiltySuspect = this.currentCase?.suspects.find(s => s.isGuilty);
 
-    // Transition to GameOver scene with all the data it needs
     transitionToScene(this, 'GameOver', {
       correct,
       accusedName: this.selectedSuspect?.name ?? 'Unknown',
@@ -332,15 +298,13 @@ export class Accusation extends Scene {
 
   private createNavigationButtons(_width: number, height: number): void {
     const mobile = this.isMobile();
-    const backBtn = this.add
-      .text(mobile ? 15 : 25, height - (mobile ? 15 : 22), '[BACK]', {
-        fontFamily: 'Courier New', fontSize: `${this.getFontSize(10)}px`, color: '#888888',
-        backgroundColor: '#1a1a2e', padding: { x: 8, y: 4 },
-        resolution: 2,
-      })
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => backBtn.setColor('#ffffff'))
-      .on('pointerout', () => backBtn.setColor('#888888'))
-      .on('pointerdown', () => transitionToScene(this, 'Interrogation'));
+
+    createNoirButton(this, mobile ? 50 : 70, height - (mobile ? 20 : 28), '[BACK]', {
+      size: 'small',
+      color: 'gray',
+      hoverColor: 'white',
+      onClick: () => transitionToScene(this, 'Interrogation'),
+      padding: { x: 12, y: 6 },
+    });
   }
 }

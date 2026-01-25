@@ -128,13 +128,13 @@ export class Interrogation extends Scene {
       maxWidth: panelWidth - portraitSize - 55,
     }));
 
-    this.suspectPanel.add(createNoirText(this, -panelWidth / 2 + 15, panelHeight / 2 - 75, 'ALIBI:', {
+    this.suspectPanel.add(createNoirText(this, -panelWidth / 2 + 15, -5, 'ALIBI:', {
       size: 'small',
       color: 'red',
       origin: { x: 0, y: 0 },
     }));
 
-    this.suspectPanel.add(createNoirText(this, -panelWidth / 2 + 15, panelHeight / 2 - 55, suspect.alibi.toUpperCase(), {
+    this.suspectPanel.add(createNoirText(this, -panelWidth / 2 + 15, 15, suspect.alibi.toUpperCase(), {
       size: 'small',
       color: 'lightGray',
       origin: { x: 0, y: 0 },

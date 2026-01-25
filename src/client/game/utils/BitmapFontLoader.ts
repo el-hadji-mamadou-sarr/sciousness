@@ -70,7 +70,7 @@ function createBitmapFont(scene: Phaser.Scene, config: FontConfig): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Configure font
-  ctx.font = `bold ${size}px "Consolas", "Courier New", monospace`;
+  ctx.font = `${size}px "Roboto Mono", "JetBrains Mono", "Fira Code", "Inconsolata", monospace`;
   ctx.fillStyle = color;
   ctx.textBaseline = 'top';
   ctx.textAlign = 'left';

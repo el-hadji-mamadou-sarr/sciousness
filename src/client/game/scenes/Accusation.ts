@@ -80,7 +80,7 @@ export class Accusation extends Scene {
     const mobile = this.isMobile();
     const suspects = this.currentCase.suspects;
     const startY = mobile ? 65 : 90;
-    const cardHeight = mobile ? 105 : 125;
+    const cardHeight = mobile ? 120 : 145;
     const cardSpacing = mobile ? 8 : 12;
 
     suspects.forEach((suspect, index) => {
@@ -164,7 +164,7 @@ export class Accusation extends Scene {
 
     const foundClues = this.currentCase.clues.filter((c) => this.progress!.cluesFound.includes(c.id));
     const clueText = foundClues.length > 0
-      ? foundClues.map((c) => `- ${c.name.toUpperCase()}`).join('\n')
+      ? foundClues.map((c) => c.name.toUpperCase()).join(', ')
       : 'NO CLUES YET!';
 
     // Evidence list

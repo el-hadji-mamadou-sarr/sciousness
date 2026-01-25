@@ -102,7 +102,7 @@ export class GameOver extends Scene {
   private createExplanationPanel(width: number, height: number, mobile: boolean, correct: boolean): void {
     const panelWidth = width - (mobile ? 30 : 60);
     const panelHeight = mobile ? 140 : 150;
-    const panelY = mobile ? 135 : 175;
+    const panelY = mobile ? 145 : 185;
 
     const container = this.add.container(width / 2, panelY);
 
@@ -147,8 +147,8 @@ export class GameOver extends Scene {
 
   private createPlayerStatsPanel(width: number, height: number, mobile: boolean): void {
     const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = mobile ? 55 : 60;
-    const panelY = mobile ? 255 : 310;
+    const panelHeight = mobile ? 75 : 85;
+    const panelY = mobile ? 300 : 355;
 
     const container = this.add.container(width / 2, panelY);
 
@@ -166,11 +166,16 @@ export class GameOver extends Scene {
     const suspectsInterrogated = progress?.suspectsInterrogated.length ?? 0;
     const totalSuspects = currentCase?.suspects.length ?? 0;
 
-    const statsText = `CLUES: ${cluesFound}/${totalClues}  |  INTERROGATED: ${suspectsInterrogated}/${totalSuspects}`;
-    container.add(createNoirText(this, 0, panelHeight / 2, statsText, {
+    container.add(createNoirText(this, 0, 20, `CLUES: ${cluesFound}/${totalClues}`, {
       size: 'medium',
       color: 'gold',
-      origin: { x: 0.5, y: 0.5 },
+      origin: { x: 0.5, y: 0 },
+    }));
+
+    container.add(createNoirText(this, 0, 48, `INTERROGATED: ${suspectsInterrogated}/${totalSuspects}`, {
+      size: 'medium',
+      color: 'gold',
+      origin: { x: 0.5, y: 0 },
     }));
   }
 
@@ -193,7 +198,7 @@ export class GameOver extends Scene {
 
     const panelWidth = width - (mobile ? 30 : 60);
     const panelHeight = mobile ? 125 : 140;
-    const panelY = mobile ? 320 : 385;
+    const panelY = mobile ? 390 : 460;
 
     this.leaderboardContainer = this.add.container(width / 2, panelY);
 

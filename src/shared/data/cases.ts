@@ -263,13 +263,13 @@ export const CASE_001: Case = {
 export const ALL_CASES: Case[] = [CASE_001, case2];
 
 export const getCurrentCase = (): Case => {
-  // Get current day number (1 = Monday, 2 = Tuesday, etc.)
+  // Sunday = case2, Monday = case3, Tuesday = case4, etc.
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 
-  // Map day of week to case (Monday = 1, Tuesday = 2, etc.)
-  // For weekend, use case 1
-  const caseIndex = dayOfWeek === 0 || dayOfWeek === 6 ? 0 : dayOfWeek - 1;
+  // Map: Sunday (0) -> case2 (index 1), Monday (1) -> case3 (index 2), etc.
+  // For now with only 2 cases: Sunday -> case2, all other days -> case1
+  const caseIndex = dayOfWeek === 0 ? 1 : 0;
 
   // Return the case for this day, or first case if out of bounds
   return ALL_CASES[caseIndex] || CASE_001;

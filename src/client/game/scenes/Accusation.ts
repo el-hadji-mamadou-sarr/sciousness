@@ -80,8 +80,8 @@ export class Accusation extends Scene {
     const mobile = this.isMobile();
     const suspects = this.currentCase.suspects;
     const startY = mobile ? 65 : 90;
-    const cardHeight = mobile ? 90 : 110;
-    const cardSpacing = mobile ? 10 : 15;
+    const cardHeight = mobile ? 105 : 125;
+    const cardSpacing = mobile ? 8 : 12;
 
     suspects.forEach((suspect, index) => {
       const y = startY + index * (cardHeight + cardSpacing);
@@ -104,35 +104,35 @@ export class Accusation extends Scene {
     bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
     container.add(bg);
 
-    const portraitSize = mobile ? 55 : 70;
+    const portraitSize = mobile ? 60 : 75;
     const portrait = this.add.graphics();
-    const portraitX = -cardWidth / 2 + 8 + portraitSize / 2;
-    const portraitY = 8 + portraitSize / 2;
+    const portraitX = -cardWidth / 2 + 12 + portraitSize / 2;
+    const portraitY = 12 + portraitSize / 2;
     drawSuspectPortrait(portrait, portraitX, portraitY, portraitSize, suspect.id, suspect.isGuilty);
     container.add(portrait);
 
-    const textX = -cardWidth / 2 + portraitSize + 18;
+    const textX = -cardWidth / 2 + portraitSize + 25;
 
-    container.add(createNoirText(this, textX, 12, suspect.name.toUpperCase(), {
+    container.add(createNoirText(this, textX, 15, suspect.name.toUpperCase(), {
       size: 'medium',
       color: 'white',
       origin: { x: 0, y: 0 },
     }));
 
-    container.add(createNoirText(this, textX, mobile ? 35 : 42, suspect.description.toUpperCase(), {
+    container.add(createNoirText(this, textX, 42, suspect.description.toUpperCase(), {
       size: 'small',
       color: 'gray',
       origin: { x: 0, y: 0 },
-      maxWidth: cardWidth - portraitSize - (mobile ? 90 : 110),
+      maxWidth: cardWidth - portraitSize - (mobile ? 100 : 120),
     }));
 
     // Accuse button
-    const accuseBtn = createNoirButton(this, cardWidth / 2 - 45, cardHeight / 2, 'ACCUSE', {
+    const accuseBtn = createNoirButton(this, cardWidth / 2 - 50, cardHeight / 2, 'ACCUSE', {
       size: 'small',
       color: 'red',
       hoverColor: 'gold',
       onClick: () => this.showConfirmation(suspect),
-      padding: { x: 10, y: 6 },
+      padding: { x: 12, y: 8 },
     });
     container.add(accuseBtn);
 
@@ -143,7 +143,7 @@ export class Accusation extends Scene {
     if (!this.currentCase || !this.progress) return;
 
     const mobile = this.isMobile();
-    const panelHeight = mobile ? 60 : 80;
+    const panelHeight = mobile ? 110 : 130;
     const panelY = height - panelHeight - (mobile ? 35 : 50);
     const panelWidth = width - (mobile ? 20 : 60);
 
@@ -157,22 +157,22 @@ export class Accusation extends Scene {
     container.add(bg);
 
     container.add(createNoirText(this, 0, 12, `EVIDENCE: ${this.progress.cluesFound.length}/${this.currentCase.clues.length}`, {
-      size: 'small',
+      size: 'medium',
       color: 'gold',
       origin: { x: 0.5, y: 0 },
     }));
 
     const foundClues = this.currentCase.clues.filter((c) => this.progress!.cluesFound.includes(c.id));
     const clueText = foundClues.length > 0
-      ? foundClues.map((c) => `- ${c.name.toUpperCase()}`).join(mobile ? ', ' : '\n')
+      ? foundClues.map((c) => `- ${c.name.toUpperCase()}`).join('\n')
       : 'NO CLUES YET!';
 
-    container.add(createNoirText(this, -panelWidth / 2 + 12, 30, clueText, {
+    // Evidence list
+    container.add(createNoirText(this, 0, 38, clueText, {
       size: 'small',
       color: 'gray',
-      origin: { x: 0, y: 0 },
-      maxWidth: panelWidth - 24,
-      scale: 0.7,
+      origin: { x: 0.5, y: 0 },
+      maxWidth: panelWidth - 30,
     }));
   }
 

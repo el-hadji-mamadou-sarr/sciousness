@@ -159,3 +159,99 @@ export function createNoirButton(
 export function isMobileScreen(scene: Phaser.Scene): boolean {
   return scene.scale.width < 500;
 }
+
+/**
+ * Creates a scrollable text box with mask
+ */
+export function createScrollableTextBox(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  text: string,
+  config: NoirTextConfig = {}
+): Phaser.GameObjects.Container {
+  const container = scene.add.container(x, y);
+
+  // Create the text content
+  const textObj = createNoirText(scene, 0, 0, text, {
+    ...config,
+    origin: { x: 0, y: 0 },
+    maxWidth: width - 20,
+  });
+
+  // Content container that will scroll
+  const contentContainer = scene.add.container(10, 5);
+  contentContainer.add(textObj);
+
+  // Create mask shape
+  const maskShape = scene.make.graphics({ x: 0, y: 0 });
+  maskShape.fillStyle(0xffffff);
+  maskShape.fillRect(x, y, width, height);
+
+  const mask = maskShape.createGeometryMask();
+  contentContainer.setMask(mask);
+
+  container.add(contentContainer);
+
+  // Check if content overflows
+  const contentHeight = textObj.height;
+  const needsScroll = contentHeight > height - 10;
+
+  if (needsScroll) {
+    let scrollY = 0;
+    const maxScroll = Math.max(0, contentHeight - height + 20);
+
+    // Scroll indicator
+    const scrollIndicator = scene.add.graphics();
+    const updateScrollIndicator = () => {
+      scrollIndicator.clear();
+      const scrollRatio = scrollY / maxScroll;
+      const indicatorHeight = Math.max(20, (height / contentHeight) * height);
+      const indicatorY = scrollRatio * (height - indicatorHeight);
+      scrollIndicator.fillStyle(0x666666, 0.5);
+      scrollIndicator.fillRoundedRect(width - 6, indicatorY, 4, indicatorHeight, 2);
+    };
+    updateScrollIndicator();
+    container.add(scrollIndicator);
+
+    // Make container interactive for scrolling
+    const hitArea = new Phaser.Geom.Rectangle(0, 0, width, height);
+    container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+
+    // Drag scrolling
+    let isDragging = false;
+    let lastY = 0;
+
+    container.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      isDragging = true;
+      lastY = pointer.y;
+    });
+
+    scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!isDragging) return;
+      const deltaY = lastY - pointer.y;
+      scrollY = Phaser.Math.Clamp(scrollY + deltaY, 0, maxScroll);
+      contentContainer.y = 5 - scrollY;
+      lastY = pointer.y;
+      updateScrollIndicator();
+    });
+
+    scene.input.on('pointerup', () => {
+      isDragging = false;
+    });
+
+    // Mouse wheel scrolling
+    container.on('wheel', (_pointer: Phaser.Input.Pointer, _dx: number, dy: number) => {
+      scrollY = Phaser.Math.Clamp(scrollY + dy * 0.5, 0, maxScroll);
+      contentContainer.y = 5 - scrollY;
+      updateScrollIndicator();
+    });
+  }
+
+  // Store mask for cleanup
+  (container as Phaser.GameObjects.Container & { _maskShape: Phaser.GameObjects.Graphics })._maskShape = maskShape;
+
+  return container;
+}

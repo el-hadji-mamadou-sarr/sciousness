@@ -63,8 +63,8 @@ export class GameOver extends Scene {
   }
 
   private createResultBadge(width: number, mobile: boolean, correct: boolean): void {
-    const badgeY = mobile ? 30 : 45;
-    const badgeSize = mobile ? 35 : 50;
+    const badgeY = mobile ? 35 : 50;
+    const badgeSize = mobile ? 40 : 55;
 
     const badge = this.add.graphics();
     badge.lineStyle(3, correct ? 0x00ff00 : 0xff0000, 1);
@@ -79,10 +79,10 @@ export class GameOver extends Scene {
       origin: { x: 0.5, y: 0.5 },
     });
 
-    const titleY = badgeY + badgeSize + (mobile ? 12 : 18);
+    const titleY = badgeY + badgeSize + (mobile ? 15 : 22);
     const titleText = correct ? 'CASE SOLVED' : 'CASE FAILED';
     createNoirText(this, width / 2, titleY, titleText, {
-      size: 'large',
+      size: 'xlarge',
       color: correct ? 'green' : 'red',
       origin: { x: 0.5, y: 0.5 },
     });
@@ -90,10 +90,10 @@ export class GameOver extends Scene {
 
   private createCaseInfo(width: number, mobile: boolean): void {
     const caseTitle = this.gameData?.currentCase?.title ?? 'UNKNOWN CASE';
-    const y = mobile ? 100 : 135;
+    const y = mobile ? 115 : 150;
 
     createNoirText(this, width / 2, y, caseTitle.toUpperCase(), {
-      size: 'small',
+      size: 'medium',
       color: 'gray',
       origin: { x: 0.5, y: 0.5 },
     });
@@ -101,8 +101,8 @@ export class GameOver extends Scene {
 
   private createExplanationPanel(width: number, height: number, mobile: boolean, correct: boolean): void {
     const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = mobile ? 90 : 100;
-    const panelY = mobile ? 115 : 155;
+    const panelHeight = mobile ? 140 : 150;
+    const panelY = mobile ? 135 : 175;
 
     const container = this.add.container(width / 2, panelY);
 
@@ -122,33 +122,33 @@ export class GameOver extends Scene {
 
     if (correct) {
       headerText = `YOU CAUGHT ${accusedName.toUpperCase()}!`;
-      const evidenceList = evidence.slice(0, 2).map(e => `- ${e.toUpperCase()}`).join('\n');
+      const evidenceList = evidence.map(e => `- ${e.toUpperCase()}`).join('\n');
       detailText = `KEY EVIDENCE:\n${evidenceList}`;
     } else {
       headerText = `${accusedName.toUpperCase()} WAS INNOCENT.`;
-      const evidenceList = evidence.slice(0, 2).map(e => `- ${e.toUpperCase()}`).join('\n');
+      const evidenceList = evidence.map(e => `- ${e.toUpperCase()}`).join('\n');
       detailText = `THE KILLER: ${guiltyName.toUpperCase()}\n${evidenceList}`;
     }
 
-    container.add(createNoirText(this, 0, 15, headerText, {
-      size: 'small',
+    container.add(createNoirText(this, 0, 18, headerText, {
+      size: 'medium',
       color: 'white',
       origin: { x: 0.5, y: 0 },
     }));
 
-    container.add(createNoirText(this, 0, panelHeight / 2 + 10, detailText, {
+    // Detail text
+    container.add(createNoirText(this, 0, 48, detailText, {
       size: 'small',
       color: 'gray',
       origin: { x: 0.5, y: 0 },
-      align: 1,
-      scale: 0.8,
+      maxWidth: panelWidth - 30,
     }));
   }
 
   private createPlayerStatsPanel(width: number, height: number, mobile: boolean): void {
     const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = mobile ? 45 : 50;
-    const panelY = mobile ? 215 : 270;
+    const panelHeight = mobile ? 55 : 60;
+    const panelY = mobile ? 255 : 310;
 
     const container = this.add.container(width / 2, panelY);
 
@@ -168,7 +168,7 @@ export class GameOver extends Scene {
 
     const statsText = `CLUES: ${cluesFound}/${totalClues}  |  INTERROGATED: ${suspectsInterrogated}/${totalSuspects}`;
     container.add(createNoirText(this, 0, panelHeight / 2, statsText, {
-      size: 'small',
+      size: 'medium',
       color: 'gold',
       origin: { x: 0.5, y: 0.5 },
     }));
@@ -192,8 +192,8 @@ export class GameOver extends Scene {
     if (!this.leaderboard) return;
 
     const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = mobile ? 115 : 130;
-    const panelY = mobile ? 270 : 335;
+    const panelHeight = mobile ? 125 : 140;
+    const panelY = mobile ? 320 : 385;
 
     this.leaderboardContainer = this.add.container(width / 2, panelY);
 
@@ -205,7 +205,7 @@ export class GameOver extends Scene {
     this.leaderboardContainer.add(bg);
 
     this.leaderboardContainer.add(createNoirText(this, 0, 14, 'COMMUNITY STATS', {
-      size: 'small',
+      size: 'medium',
       color: 'cyan',
       origin: { x: 0.5, y: 0 },
     }));
@@ -213,17 +213,16 @@ export class GameOver extends Scene {
     const totalText = `${this.leaderboard.totalPlayers} DETECTIVES PLAYED`;
     const solveText = `${this.leaderboard.solveRate}% SOLVE RATE (${this.leaderboard.solvedCount} SOLVED)`;
 
-    this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 38 : 42, totalText, {
+    this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 42 : 48, totalText, {
       size: 'small',
       color: 'white',
       origin: { x: 0.5, y: 0 },
     }));
 
-    this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 55 : 62, solveText, {
+    this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 62 : 70, solveText, {
       size: 'small',
       color: 'gray',
       origin: { x: 0.5, y: 0 },
-      scale: 0.8,
     }));
 
     if (this.leaderboard.suspectStats.length > 0) {
@@ -232,12 +231,12 @@ export class GameOver extends Scene {
         return `${s.suspectName.substring(0, mobile ? 10 : 16).toUpperCase()}: ${bar} ${s.percentage}%`;
       }).join('\n');
 
-      this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 82 : 95, suspectLines, {
+      this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 88 : 100, suspectLines, {
         size: 'small',
         color: 'gray',
         origin: { x: 0.5, y: 0 },
         align: 0,
-        scale: 0.7,
+        scale: 0.9,
       }));
     }
   }
@@ -261,14 +260,14 @@ export class GameOver extends Scene {
   }
 
   private createPlayAgainButton(width: number, height: number, mobile: boolean): void {
-    const btnY = height - (mobile ? 28 : 45);
+    const btnY = height - (mobile ? 30 : 50);
 
     createNoirButton(this, width / 2, btnY, '[RETURN TO MENU]', {
-      size: 'small',
+      size: 'medium',
       color: 'white',
       hoverColor: 'gold',
       onClick: () => transitionToScene(this, 'MainMenu'),
-      padding: { x: 15, y: 8 },
+      padding: { x: 20, y: 10 },
     });
   }
 }

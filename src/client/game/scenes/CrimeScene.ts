@@ -565,7 +565,7 @@ export class CrimeScene extends Scene {
     if (!this.infoPanel) return;
     const { width } = this.scale;
     const mobile = this.isMobile();
-    const panelHeight = mobile ? 85 : 105;
+    const panelHeight = mobile ? 110 : 130;
 
     this.infoPanel.removeAll(true);
 
@@ -576,18 +576,18 @@ export class CrimeScene extends Scene {
     bg.strokeRoundedRect(-width / 2 + 10, -panelHeight / 2, width - 20, panelHeight, 5);
     this.infoPanel.add(bg);
 
-    this.infoPanel.add(createNoirText(this, 0, mobile ? -18 : -22, title.toUpperCase(), {
+    this.infoPanel.add(createNoirText(this, 0, -panelHeight / 2 + 15, title.toUpperCase(), {
       size: 'medium',
       color: 'red',
-      origin: { x: 0.5, y: 0.5 },
+      origin: { x: 0.5, y: 0 },
     }));
 
-    this.infoPanel.add(createNoirText(this, 0, mobile ? 12 : 15, description.toUpperCase(), {
+    // Description text
+    this.infoPanel.add(createNoirText(this, 0, -panelHeight / 2 + 45, description.toUpperCase(), {
       size: 'small',
       color: 'lightGray',
-      origin: { x: 0.5, y: 0.5 },
-      maxWidth: width - 40,
-      align: 1,
+      origin: { x: 0.5, y: 0 },
+      maxWidth: width - 50,
     }));
   }
 

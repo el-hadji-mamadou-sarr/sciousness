@@ -40,7 +40,7 @@ export class Accusation extends Scene {
 
     await this.loadGameData();
 
-    this.createSuspectSelection(width, height);
+    this.createSuspectSelection(width);
     this.createConfirmPanel(width, height);
     this.createNavigationButtons(width, height);
 
@@ -74,7 +74,7 @@ export class Accusation extends Scene {
     this.progress = { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
   }
 
-  private createSuspectSelection(width: number, height: number): void {
+  private createSuspectSelection(width: number): void {
     if (!this.currentCase) return;
 
     const mobile = this.isMobile();
@@ -88,8 +88,6 @@ export class Accusation extends Scene {
       const container = this.createSuspectCard(suspect, width, y, cardHeight);
       this.suspectButtons.push(container);
     });
-
-    this.createCluesSummary(width, height);
   }
 
   private createSuspectCard(suspect: Suspect, width: number, y: number, cardHeight: number): GameObjects.Container {
@@ -137,43 +135,6 @@ export class Accusation extends Scene {
     container.add(accuseBtn);
 
     return container;
-  }
-
-  private createCluesSummary(width: number, height: number): void {
-    if (!this.currentCase || !this.progress) return;
-
-    const mobile = this.isMobile();
-    const panelHeight = mobile ? 110 : 130;
-    const panelY = height - panelHeight - (mobile ? 35 : 50);
-    const panelWidth = width - (mobile ? 20 : 60);
-
-    const container = this.add.container(width / 2, panelY);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0x0f3460, 0.8);
-    bg.fillRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 6);
-    bg.lineStyle(1, 0xffd700, 0.5);
-    bg.strokeRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 6);
-    container.add(bg);
-
-    container.add(createNoirText(this, 0, 12, `EVIDENCE: ${this.progress.cluesFound.length}/${this.currentCase.clues.length}`, {
-      size: 'medium',
-      color: 'gold',
-      origin: { x: 0.5, y: 0 },
-    }));
-
-    const foundClues = this.currentCase.clues.filter((c) => this.progress!.cluesFound.includes(c.id));
-    const clueText = foundClues.length > 0
-      ? foundClues.map((c) => c.name.toUpperCase()).join(', ')
-      : 'NO CLUES YET!';
-
-    // Evidence list
-    container.add(createNoirText(this, 0, 38, clueText, {
-      size: 'small',
-      color: 'gray',
-      origin: { x: 0.5, y: 0 },
-      maxWidth: panelWidth - 30,
-    }));
   }
 
   private createConfirmPanel(width: number, height: number): void {
@@ -295,7 +256,7 @@ export class Accusation extends Scene {
     });
   }
 
-  private createNavigationButtons(_width: number, height: number): void {
+  private createNavigationButtons(width: number, height: number): void {
     const mobile = this.isMobile();
 
     createNoirButton(this, mobile ? 50 : 70, height - (mobile ? 20 : 28), '[BACK]', {
@@ -303,6 +264,14 @@ export class Accusation extends Scene {
       color: 'gray',
       hoverColor: 'white',
       onClick: () => transitionToScene(this, 'Interrogation'),
+      padding: { x: 12, y: 6 },
+    });
+
+    createNoirButton(this, width - (mobile ? 70 : 90), height - (mobile ? 20 : 28), '[EVIDENCE]', {
+      size: 'small',
+      color: 'gold',
+      hoverColor: 'white',
+      onClick: () => transitionToScene(this, 'Evidence'),
       padding: { x: 12, y: 6 },
     });
   }

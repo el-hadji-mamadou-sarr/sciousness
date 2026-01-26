@@ -8,6 +8,7 @@ import { Loading } from './scenes/Loading';
 import { CrimeScene } from './scenes/CrimeScene';
 import { Interrogation } from './scenes/Interrogation';
 import { Accusation } from './scenes/Accusation';
+import { Evidence } from './scenes/Evidence';
 
 //  Find out more information about the Game Config at:
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
@@ -26,7 +27,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 360,
     height: 640,
   },
-  scene: [Boot, Preloader, Loading, MainMenu, CrimeScene, Interrogation, Accusation, GameOver],
+  scene: [Boot, Preloader, Loading, MainMenu, CrimeScene, Interrogation, Accusation, Evidence, GameOver],
 };
 
 const StartGame = (parent: string) => {

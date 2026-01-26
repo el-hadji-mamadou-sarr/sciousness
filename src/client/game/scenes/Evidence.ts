@@ -1,0 +1,166 @@
+import { Scene, GameObjects } from 'phaser';
+import { Case, Clue, PlayerProgress, InitGameResponse } from '../../../shared/types/game';
+import { case1 } from './crime-scenes/case1';
+import { transitionToScene } from '../utils/SceneTransition';
+import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
+
+export class Evidence extends Scene {
+  private currentCase: Case | null = null;
+  private progress: PlayerProgress | null = null;
+  private clueContainers: GameObjects.Container[] = [];
+
+  constructor() {
+    super('Evidence');
+  }
+
+  private isMobile(): boolean {
+    return isMobileScreen(this);
+  }
+
+  async create() {
+    const { width, height } = this.scale;
+
+    this.cameras.main.setBackgroundColor(0x0a0a14);
+    this.createScanlines(width, height);
+
+    createNoirText(this, width / 2, this.isMobile() ? 18 : 28, 'EVIDENCE ROOM', {
+      size: 'large',
+      color: 'gold',
+      origin: { x: 0.5, y: 0.5 },
+    });
+
+    await this.loadGameData();
+
+    this.createEvidenceList(width, height);
+    this.createNavigationButtons(width, height);
+
+    this.scale.on('resize', () => this.scene.restart());
+  }
+
+  private createScanlines(width: number, height: number): void {
+    const graphics = this.add.graphics();
+    const spacing = this.isMobile() ? 5 : 3;
+    graphics.lineStyle(1, 0x000000, 0.1);
+    for (let y = 0; y < height; y += spacing) {
+      graphics.lineBetween(0, y, width, y);
+    }
+  }
+
+  private async loadGameData(): Promise<void> {
+    try {
+      const response = await fetch('/api/game/init');
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const data = (await response.json()) as InitGameResponse;
+      this.currentCase = data.currentCase;
+      this.progress = data.progress;
+    } catch (error) {
+      console.error('Failed to load game data:', error);
+      this.createFallbackCase();
+    }
+  }
+
+  private createFallbackCase(): void {
+    this.currentCase = { ...case1 };
+    this.progress = { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
+  }
+
+  private createEvidenceList(width: number, height: number): void {
+    if (!this.currentCase || !this.progress) return;
+
+    const mobile = this.isMobile();
+    const foundClues = this.currentCase.clues.filter((c) => this.progress!.cluesFound.includes(c.id));
+
+    // Summary header
+    const summaryY = mobile ? 45 : 55;
+    createNoirText(
+      this,
+      width / 2,
+      summaryY,
+      `COLLECTED: ${this.progress.cluesFound.length}/${this.currentCase.clues.length}`,
+      {
+        size: 'medium',
+        color: 'white',
+        origin: { x: 0.5, y: 0.5 },
+      }
+    );
+
+    if (foundClues.length === 0) {
+      createNoirText(this, width / 2, height / 2, 'NO EVIDENCE COLLECTED YET!', {
+        size: 'medium',
+        color: 'gray',
+        origin: { x: 0.5, y: 0.5 },
+      });
+      return;
+    }
+
+    const startY = mobile ? 75 : 90;
+    const cardHeight = mobile ? 100 : 110;
+    const cardSpacing = mobile ? 10 : 12;
+
+    foundClues.forEach((clue, index) => {
+      const y = startY + index * (cardHeight + cardSpacing);
+      const container = this.createEvidenceCard(clue, width, y, cardHeight);
+      this.clueContainers.push(container);
+    });
+  }
+
+  private createEvidenceCard(clue: Clue, width: number, y: number, cardHeight: number): GameObjects.Container {
+    const mobile = this.isMobile();
+    const container = this.add.container(width / 2, y);
+    const cardWidth = width - (mobile ? 20 : 60);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x16213e, 0.9);
+    bg.fillRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
+    bg.lineStyle(2, 0xffd700, 0.8);
+    bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
+    container.add(bg);
+
+    // Clue name
+    container.add(
+      createNoirText(this, -cardWidth / 2 + 12, 12, clue.name.toUpperCase(), {
+        size: 'medium',
+        color: 'gold',
+        origin: { x: 0, y: 0 },
+      })
+    );
+
+    // Clue description
+    container.add(
+      createNoirText(this, -cardWidth / 2 + 12, 38, clue.description.toUpperCase(), {
+        size: 'small',
+        color: 'gray',
+        origin: { x: 0, y: 0 },
+        maxWidth: cardWidth - 24,
+      })
+    );
+
+    // Linked suspect indicator
+    if (clue.linkedTo) {
+      const suspect = this.currentCase?.suspects.find((s) => s.id === clue.linkedTo);
+      if (suspect) {
+        container.add(
+          createNoirText(this, cardWidth / 2 - 12, cardHeight - 18, `[LINKS TO: ${suspect.name.toUpperCase()}]`, {
+            size: 'small',
+            color: 'red',
+            origin: { x: 1, y: 0 },
+          })
+        );
+      }
+    }
+
+    return container;
+  }
+
+  private createNavigationButtons(width: number, height: number): void {
+    const mobile = this.isMobile();
+
+    createNoirButton(this, mobile ? 50 : 70, height - (mobile ? 20 : 28), '[BACK]', {
+      size: 'small',
+      color: 'gray',
+      hoverColor: 'white',
+      onClick: () => transitionToScene(this, 'Accusation'),
+      padding: { x: 12, y: 6 },
+    });
+  }
+}

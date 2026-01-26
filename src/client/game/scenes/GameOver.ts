@@ -165,21 +165,21 @@ export class GameOver extends Scene {
   private createLeaderboardPanel(width: number, height: number, mobile: boolean): void {
     if (!this.leaderboard) return;
 
-    const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = mobile ? 180 : 220;
+    const panelWidth = width - (mobile ? 20 : 40);
+    const panelHeight = mobile ? 250 : 300;
     const panelY = mobile ? 260 : 320;
 
     this.leaderboardContainer = this.add.container(width / 2, panelY);
 
     const bg = this.add.graphics();
     bg.fillStyle(0x1a1a2e, 0.9);
-    bg.fillRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 8);
-    bg.lineStyle(2, 0x6c5ce7, 0.6);
-    bg.strokeRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 8);
+    bg.fillRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 10);
+    bg.lineStyle(3, 0x6c5ce7, 0.7);
+    bg.strokeRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 10);
     this.leaderboardContainer.add(bg);
 
-    this.leaderboardContainer.add(createNoirText(this, 0, 18, 'COMMUNITY STATS', {
-      size: 'large',
+    this.leaderboardContainer.add(createNoirText(this, 0, 25, 'COMMUNITY STATS', {
+      size: 'xlarge',
       color: 'cyan',
       origin: { x: 0.5, y: 0 },
     }));
@@ -187,14 +187,14 @@ export class GameOver extends Scene {
     const totalText = `${this.leaderboard.totalPlayers} DETECTIVES PLAYED`;
     const solveText = `${this.leaderboard.solveRate}% SOLVE RATE`;
 
-    this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 55 : 65, totalText, {
-      size: 'large',
+    this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 70 : 85, totalText, {
+      size: 'xlarge',
       color: 'white',
       origin: { x: 0.5, y: 0 },
     }));
 
-    this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 85 : 100, solveText, {
-      size: 'medium',
+    this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 110 : 130, solveText, {
+      size: 'large',
       color: 'gold',
       origin: { x: 0.5, y: 0 },
     }));
@@ -202,11 +202,11 @@ export class GameOver extends Scene {
     if (this.leaderboard.suspectStats.length > 0) {
       const suspectLines = this.leaderboard.suspectStats.map(s => {
         const bar = this.createPercentageBar(s.percentage);
-        return `${s.suspectName.substring(0, mobile ? 12 : 18).toUpperCase()}: ${bar} ${s.percentage}%`;
+        return `${s.suspectName.substring(0, mobile ? 12 : 20).toUpperCase()}: ${bar} ${s.percentage}%`;
       }).join('\n');
 
-      this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 115 : 140, suspectLines, {
-        size: 'medium',
+      this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 150 : 180, suspectLines, {
+        size: 'large',
         color: 'gray',
         origin: { x: 0.5, y: 0 },
         align: 0,

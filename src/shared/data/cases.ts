@@ -1,5 +1,6 @@
 import { Case } from '../types/game';
 import { case2 } from '../../client/game/scenes/crime-scenes/case2';
+import { case3 } from '../../client/game/scenes/crime-scenes/case3';
 
 // Sample case for MVP
 export const CASE_001: Case = {
@@ -260,7 +261,7 @@ export const CASE_001: Case = {
   ],
 };
 
-export const ALL_CASES: Case[] = [CASE_001, case2];
+export const ALL_CASES: Case[] = [CASE_001, case2, case3];
 
 export const getCurrentCase = (): Case => {
   // Sunday = case2, Monday = case3, Tuesday = case4, etc.
@@ -268,8 +269,7 @@ export const getCurrentCase = (): Case => {
   const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 
   // Map: Sunday (0) -> case2 (index 1), Monday (1) -> case3 (index 2), etc.
-  // For now with only 2 cases: Sunday -> case2, all other days -> case1
-  const caseIndex = dayOfWeek === 0 ? 1 : 0;
+  const caseIndex = dayOfWeek + 1;
 
   // Return the case for this day, or first case if out of bounds
   return ALL_CASES[caseIndex] || CASE_001;

@@ -46,7 +46,6 @@ export class GameOver extends Scene {
     this.createResultBadge(width, mobile, correct);
     this.createCaseInfo(width, mobile);
     this.createExplanationPanel(width, height, mobile, correct);
-    this.createPlayerStatsPanel(width, height, mobile);
     await this.loadAndCreateLeaderboard(width, height, mobile);
     this.createPlayAgainButton(width, height, mobile);
 
@@ -101,7 +100,7 @@ export class GameOver extends Scene {
 
   private createExplanationPanel(width: number, height: number, mobile: boolean, correct: boolean): void {
     const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = mobile ? 140 : 150;
+    const panelHeight = mobile ? 100 : 120;
     const panelY = mobile ? 145 : 185;
 
     const container = this.add.container(width / 2, panelY);
@@ -115,68 +114,38 @@ export class GameOver extends Scene {
 
     const accusedName = this.gameData?.accusedName ?? 'Unknown';
     const guiltyName = this.gameData?.guiltyName ?? 'Unknown';
-    const evidence = this.gameData?.evidence ?? [];
-
-    let headerText: string;
-    let detailText: string;
 
     if (correct) {
-      headerText = `YOU CAUGHT ${accusedName.toUpperCase()}!`;
-      const evidenceList = evidence.map(e => `- ${e.toUpperCase()}`).join('\n');
-      detailText = `KEY EVIDENCE:\n${evidenceList}`;
+      container.add(createNoirText(this, 0, 25, 'YOU CAUGHT', {
+        size: 'medium',
+        color: 'white',
+        origin: { x: 0.5, y: 0 },
+      }));
+
+      container.add(createNoirText(this, 0, 55, accusedName.toUpperCase(), {
+        size: 'xlarge',
+        color: 'green',
+        origin: { x: 0.5, y: 0 },
+      }));
     } else {
-      headerText = `${accusedName.toUpperCase()} WAS INNOCENT.`;
-      const evidenceList = evidence.map(e => `- ${e.toUpperCase()}`).join('\n');
-      detailText = `THE KILLER: ${guiltyName.toUpperCase()}\n${evidenceList}`;
+      container.add(createNoirText(this, 0, 20, `${accusedName.toUpperCase()} WAS INNOCENT`, {
+        size: 'medium',
+        color: 'white',
+        origin: { x: 0.5, y: 0 },
+      }));
+
+      container.add(createNoirText(this, 0, 50, 'THE KILLER WAS', {
+        size: 'small',
+        color: 'gray',
+        origin: { x: 0.5, y: 0 },
+      }));
+
+      container.add(createNoirText(this, 0, 72, guiltyName.toUpperCase(), {
+        size: 'large',
+        color: 'red',
+        origin: { x: 0.5, y: 0 },
+      }));
     }
-
-    container.add(createNoirText(this, 0, 18, headerText, {
-      size: 'medium',
-      color: 'white',
-      origin: { x: 0.5, y: 0 },
-    }));
-
-    // Detail text
-    container.add(createNoirText(this, 0, 48, detailText, {
-      size: 'small',
-      color: 'gray',
-      origin: { x: 0.5, y: 0 },
-      maxWidth: panelWidth - 30,
-    }));
-  }
-
-  private createPlayerStatsPanel(width: number, height: number, mobile: boolean): void {
-    const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = mobile ? 75 : 85;
-    const panelY = mobile ? 300 : 355;
-
-    const container = this.add.container(width / 2, panelY);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0x0f3460, 0.7);
-    bg.fillRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 6);
-    bg.lineStyle(1, 0xffd700, 0.3);
-    bg.strokeRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 6);
-    container.add(bg);
-
-    const progress = this.gameData?.progress;
-    const currentCase = this.gameData?.currentCase;
-    const cluesFound = progress?.cluesFound.length ?? 0;
-    const totalClues = currentCase?.clues.length ?? 0;
-    const suspectsInterrogated = progress?.suspectsInterrogated.length ?? 0;
-    const totalSuspects = currentCase?.suspects.length ?? 0;
-
-    container.add(createNoirText(this, 0, 20, `CLUES: ${cluesFound}/${totalClues}`, {
-      size: 'medium',
-      color: 'gold',
-      origin: { x: 0.5, y: 0 },
-    }));
-
-    container.add(createNoirText(this, 0, 48, `INTERROGATED: ${suspectsInterrogated}/${totalSuspects}`, {
-      size: 'medium',
-      color: 'gold',
-      origin: { x: 0.5, y: 0 },
-    }));
   }
 
   private async loadAndCreateLeaderboard(width: number, height: number, mobile: boolean): Promise<void> {
@@ -197,8 +166,8 @@ export class GameOver extends Scene {
     if (!this.leaderboard) return;
 
     const panelWidth = width - (mobile ? 30 : 60);
-    const panelHeight = mobile ? 125 : 140;
-    const panelY = mobile ? 390 : 460;
+    const panelHeight = mobile ? 180 : 220;
+    const panelY = mobile ? 260 : 320;
 
     this.leaderboardContainer = this.add.container(width / 2, panelY);
 
@@ -209,39 +178,38 @@ export class GameOver extends Scene {
     bg.strokeRoundedRect(-panelWidth / 2, 0, panelWidth, panelHeight, 8);
     this.leaderboardContainer.add(bg);
 
-    this.leaderboardContainer.add(createNoirText(this, 0, 14, 'COMMUNITY STATS', {
-      size: 'medium',
+    this.leaderboardContainer.add(createNoirText(this, 0, 18, 'COMMUNITY STATS', {
+      size: 'large',
       color: 'cyan',
       origin: { x: 0.5, y: 0 },
     }));
 
     const totalText = `${this.leaderboard.totalPlayers} DETECTIVES PLAYED`;
-    const solveText = `${this.leaderboard.solveRate}% SOLVE RATE (${this.leaderboard.solvedCount} SOLVED)`;
+    const solveText = `${this.leaderboard.solveRate}% SOLVE RATE`;
 
-    this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 42 : 48, totalText, {
-      size: 'small',
+    this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 55 : 65, totalText, {
+      size: 'large',
       color: 'white',
       origin: { x: 0.5, y: 0 },
     }));
 
-    this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 62 : 70, solveText, {
-      size: 'small',
-      color: 'gray',
+    this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 85 : 100, solveText, {
+      size: 'medium',
+      color: 'gold',
       origin: { x: 0.5, y: 0 },
     }));
 
     if (this.leaderboard.suspectStats.length > 0) {
       const suspectLines = this.leaderboard.suspectStats.map(s => {
         const bar = this.createPercentageBar(s.percentage);
-        return `${s.suspectName.substring(0, mobile ? 10 : 16).toUpperCase()}: ${bar} ${s.percentage}%`;
+        return `${s.suspectName.substring(0, mobile ? 12 : 18).toUpperCase()}: ${bar} ${s.percentage}%`;
       }).join('\n');
 
-      this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 88 : 100, suspectLines, {
-        size: 'small',
+      this.leaderboardContainer.add(createNoirText(this, 0, mobile ? 115 : 140, suspectLines, {
+        size: 'medium',
         color: 'gray',
         origin: { x: 0.5, y: 0 },
         align: 0,
-        scale: 0.9,
       }));
     }
   }
@@ -253,12 +221,12 @@ export class GameOver extends Scene {
   }
 
   private createLeaderboardFallback(width: number, height: number, mobile: boolean): void {
-    const panelY = mobile ? 270 : 335;
+    const panelY = mobile ? 260 : 320;
 
     this.leaderboardContainer = this.add.container(width / 2, panelY);
 
     this.leaderboardContainer.add(createNoirText(this, 0, 20, 'COMMUNITY STATS LOADING...', {
-      size: 'small',
+      size: 'medium',
       color: 'darkGray',
       origin: { x: 0.5, y: 0 },
     }));

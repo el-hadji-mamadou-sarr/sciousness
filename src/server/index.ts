@@ -10,7 +10,7 @@ import {
   LeaderboardStats,
   SuspectStats,
 } from '../shared/types/game';
-import { redis, createServer, context } from '@devvit/web/server';
+import { redis, reddit, createServer, context } from '@devvit/web/server';
 import { createPost } from './core/post';
 import { getCurrentCase } from '../shared/data/cases';
 
@@ -188,6 +188,19 @@ router.post<object, AccuseResponse | { status: string; message: string }, Accuse
       if (progress.correct) {
         const statsKey = `stats:${postId}:solved`;
         await redis.incrBy(statsKey, 1);
+      }
+
+      // Post a comment on the game post (only for correct accusations)
+      if (progress.correct) {
+        const username = context.username || 'A detective';
+        try {
+          await reddit.submitComment({
+            id: postId,
+            text: `🔍 **${username}** solved the case!`,
+          });
+        } catch (commentError) {
+          console.error('Failed to post comment:', commentError);
+        }
       }
 
       res.json({

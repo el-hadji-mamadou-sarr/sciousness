@@ -3,13 +3,13 @@ import {
   Case,
   Clue,
   PlayerProgress,
-  InitGameResponse,
   FindClueResponse,
 } from '../../../shared/types/game';
 import { case1 } from './crime-scenes/case1';
 import { drawCrimeSceneObject } from '../utils/ProceduralGraphics';
 import { transitionToScene } from '../utils/SceneTransition';
 import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
+import { GameStateManager } from '../utils/GameStateManager';
 
 // Evidence item positions on the crime board
 interface BoardItem {
@@ -56,9 +56,7 @@ export class CrimeScene extends Scene {
 
   private async loadGameData(): Promise<void> {
     try {
-      const response = await fetch('/api/game/init');
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
-      const data = (await response.json()) as InitGameResponse;
+      const data = await GameStateManager.loadGameData();
       this.currentCase = data.currentCase;
       this.progress = data.progress;
     } catch (error) {
@@ -480,12 +478,15 @@ export class CrimeScene extends Scene {
       if (!response.ok) throw new Error(`API error: ${response.status}`);
       const data = (await response.json()) as FindClueResponse;
       this.progress = data.progress;
+      // Update GameStateManager with new progress
+      GameStateManager.updateProgress(data.progress);
       this.updateCluePanel();
       this.showClueFoundNotification(data.clue);
     } catch (error) {
       console.error('Failed to find clue:', error);
       if (this.progress && !this.progress.cluesFound.includes(clueId)) {
         this.progress.cluesFound.push(clueId);
+        GameStateManager.updateProgress(this.progress);
         this.updateCluePanel();
       }
     }

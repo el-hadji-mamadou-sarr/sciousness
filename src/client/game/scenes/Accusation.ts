@@ -1,9 +1,10 @@
 import { Scene, GameObjects } from 'phaser';
-import { Case, Suspect, PlayerProgress, InitGameResponse, AccuseResponse } from '../../../shared/types/game';
+import { Case, Suspect, PlayerProgress, AccuseResponse } from '../../../shared/types/game';
 import { case1 } from './crime-scenes/case1';
 import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
 import { transitionToScene } from '../utils/SceneTransition';
 import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
+import { GameStateManager } from '../utils/GameStateManager';
 
 export class Accusation extends Scene {
   private currentCase: Case | null = null;
@@ -58,9 +59,7 @@ export class Accusation extends Scene {
 
   private async loadGameData(): Promise<void> {
     try {
-      const response = await fetch('/api/game/init');
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
-      const data = (await response.json()) as InitGameResponse;
+      const data = await GameStateManager.loadGameData();
       this.currentCase = data.currentCase;
       this.progress = data.progress;
     } catch (error) {

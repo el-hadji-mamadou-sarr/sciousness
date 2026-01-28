@@ -9,10 +9,16 @@ import {
   LeaderboardResponse,
   LeaderboardStats,
   SuspectStats,
+  DetectiveProfile,
+  DetectiveLeaderboardEntry,
+  DetectiveLeaderboardResponse,
 } from '../shared/types/game';
 import { redis, reddit, createServer, context } from '@devvit/web/server';
 import { createPost } from './core/post';
 import { getCurrentCase } from '../shared/data/cases';
+
+// Points awarded for solving a case
+const POINTS_PER_SOLVE = 100;
 
 const app = express();
 
@@ -50,6 +56,54 @@ async function savePlayerProgress(postId: string, progress: PlayerProgress): Pro
   const userId = context.userId || 'anonymous';
   const key = `progress:${postId}:${userId}`;
   await redis.set(key, JSON.stringify(progress));
+}
+
+// Helper to get detective profile from Redis
+async function getDetectiveProfile(): Promise<DetectiveProfile> {
+  const userId = context.userId || 'anonymous';
+  const key = `detective:${userId}`;
+  const data = await redis.get(key);
+
+  if (data) {
+    return JSON.parse(data) as DetectiveProfile;
+  }
+
+  // Default profile
+  return {
+    odayNumber: 1,
+    points: 0,
+    solvedCases: [],
+    username: context.username || 'Anonymous',
+  };
+}
+
+// Helper to save detective profile to Redis
+async function saveDetectiveProfile(profile: DetectiveProfile): Promise<void> {
+  const userId = context.userId || 'anonymous';
+  const key = `detective:${userId}`;
+  await redis.set(key, JSON.stringify(profile));
+
+  // Also update the leaderboard sorted set
+  await redis.zAdd('leaderboard:points', { member: userId, score: profile.points });
+}
+
+// Helper to award points for solving a case (returns points earned, 0 if already solved)
+async function awardPointsForCase(caseId: string): Promise<{ pointsEarned: number; alreadySolved: boolean }> {
+  const profile = await getDetectiveProfile();
+
+  // Check if already solved this case
+  if (profile.solvedCases.includes(caseId)) {
+    return { pointsEarned: 0, alreadySolved: true };
+  }
+
+  // Award points
+  profile.solvedCases.push(caseId);
+  profile.points += POINTS_PER_SOLVE;
+  profile.username = context.username || 'Anonymous';
+
+  await saveDetectiveProfile(profile);
+
+  return { pointsEarned: POINTS_PER_SOLVE, alreadySolved: false };
 }
 
 // Initialize game - get current case and player progress
@@ -190,18 +244,30 @@ router.post<object, AccuseResponse | { status: string; message: string }, Accuse
         await redis.incrBy(statsKey, 1);
       }
 
-      // Post a comment on the game post (only for correct accusations)
+      // Award points if correct (server-side check for duplicate solves)
+      let pointsEarned = 0;
+      let alreadySolved = false;
       if (progress.correct) {
+        const pointsResult = await awardPointsForCase(currentCase.id);
+        pointsEarned = pointsResult.pointsEarned;
+        alreadySolved = pointsResult.alreadySolved;
+      }
+
+      // Post a comment on the game post (only for correct accusations, first time only)
+      if (progress.correct && !alreadySolved) {
         const username = context.username || 'A detective';
         try {
           await reddit.submitComment({
             id: postId,
-            text: `🔍 **${username}** solved the case!`,
+            text: `🔍 **${username}** solved the case and earned ${pointsEarned} points!`,
           });
         } catch (commentError) {
           console.error('Failed to post comment:', commentError);
         }
       }
+
+      // Get updated profile for response
+      const profile = await getDetectiveProfile();
 
       res.json({
         type: 'accuse',
@@ -209,6 +275,9 @@ router.post<object, AccuseResponse | { status: string; message: string }, Accuse
         correct: suspect.isGuilty,
         suspect,
         progress,
+        pointsEarned,
+        totalPoints: profile.points,
+        alreadySolved,
       });
     } catch (error) {
       console.error(`API Accuse Error:`, error);
@@ -374,6 +443,81 @@ router.get<object, LeaderboardResponse | { status: string; message: string }>(
       res.status(400).json({
         status: 'error',
         message: 'Failed to get leaderboard',
+      });
+    }
+  }
+);
+
+// Get detective leaderboard (top detectives by points)
+router.get<object, DetectiveLeaderboardResponse | { status: string; message: string }>(
+  '/api/game/detective-leaderboard',
+  async (_req, res): Promise<void> => {
+    try {
+      // Get top 10 detectives by points
+      const topMembers = await redis.zRange('leaderboard:points', 0, 9, { reverse: true, by: 'rank' });
+
+      const topDetectives: DetectiveLeaderboardEntry[] = [];
+
+      for (const member of topMembers) {
+        const key = `detective:${member.member}`;
+        const data = await redis.get(key);
+        if (data) {
+          const profile = JSON.parse(data) as DetectiveProfile;
+          topDetectives.push({
+            odayNumber: profile.odayNumber,
+            points: profile.points,
+            solvedCount: profile.solvedCases.length,
+            username: profile.username || 'Anonymous',
+          });
+        }
+      }
+
+      // Get current user's rank and profile
+      const userId = context.userId || 'anonymous';
+      let userRank: number | undefined;
+      let userProfile: DetectiveProfile | undefined;
+
+      if (userId !== 'anonymous') {
+        const rank = await redis.zRank('leaderboard:points', userId);
+        if (rank !== undefined) {
+          // zRank returns 0-indexed, and we want descending order
+          const totalMembers = await redis.zCard('leaderboard:points');
+          userRank = totalMembers - rank;
+        }
+        userProfile = await getDetectiveProfile();
+      }
+
+      res.json({
+        type: 'detective_leaderboard',
+        topDetectives,
+        userRank,
+        userProfile,
+      });
+    } catch (error) {
+      console.error(`API Detective Leaderboard Error:`, error);
+      res.status(400).json({
+        status: 'error',
+        message: 'Failed to get detective leaderboard',
+      });
+    }
+  }
+);
+
+// Get current user's detective profile
+router.get<object, { type: string; profile: DetectiveProfile } | { status: string; message: string }>(
+  '/api/game/profile',
+  async (_req, res): Promise<void> => {
+    try {
+      const profile = await getDetectiveProfile();
+      res.json({
+        type: 'profile',
+        profile,
+      });
+    } catch (error) {
+      console.error(`API Profile Error:`, error);
+      res.status(400).json({
+        status: 'error',
+        message: 'Failed to get profile',
       });
     }
   }

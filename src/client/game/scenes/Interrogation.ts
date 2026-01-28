@@ -4,18 +4,19 @@ import {
   Suspect,
   DialogueOption,
   PlayerProgress,
-  InitGameResponse,
   FindClueResponse,
 } from '../../../shared/types/game';
 import { case1 } from './crime-scenes/case1';
 import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
 import { transitionToScene } from '../utils/SceneTransition';
 import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
+import { GameStateManager } from '../utils/GameStateManager';
 
 export class Interrogation extends Scene {
   private currentCase: Case | null = null;
   private progress: PlayerProgress | null = null;
   private currentSuspect: Suspect | null = null;
+  private currentSuspectIndex: number = 0;
   private dialogueContainer: GameObjects.Container | null = null;
   private suspectPanel: GameObjects.Container | null = null;
   private currentDialogueOptions: DialogueOption[] = [];
@@ -42,10 +43,13 @@ export class Interrogation extends Scene {
 
     await this.loadGameData();
 
+    // Restore suspect index from GameStateManager
+    this.currentSuspectIndex = GameStateManager.getCurrentSuspectIndex();
+
     this.createSuspectPanel(width, height);
     this.createDialoguePanel(width, height);
     this.createNavigationButtons(width, height);
-    this.showSuspect(0);
+    this.showSuspect(this.currentSuspectIndex);
 
     this.scale.on('resize', () => this.scene.restart());
   }
@@ -61,9 +65,7 @@ export class Interrogation extends Scene {
 
   private async loadGameData(): Promise<void> {
     try {
-      const response = await fetch('/api/game/init');
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
-      const data = (await response.json()) as InitGameResponse;
+      const data = await GameStateManager.loadGameData();
       this.currentCase = data.currentCase;
       this.progress = data.progress;
     } catch (error) {
@@ -92,6 +94,9 @@ export class Interrogation extends Scene {
     if (!suspect) return;
 
     this.currentSuspect = suspect;
+    this.currentSuspectIndex = index;
+    // Save suspect index to GameStateManager for persistence
+    GameStateManager.setCurrentSuspectIndex(index);
     this.suspectPanel.removeAll(true);
 
     const { width } = this.scale;
@@ -171,9 +176,24 @@ export class Interrogation extends Scene {
       this.suspectPanel.add(nextBtn);
     }
 
-    this.currentDialogueOptions = suspect.dialogueOptions.filter(
-      (opt) => !opt.id.includes('_2') && !opt.id.includes('_3') && !opt.id.includes('_4')
-    );
+    // Restore dialogue state from GameStateManager or set initial options
+    const savedOptionIds = GameStateManager.getCurrentDialogueOptions(suspect.id);
+    if (savedOptionIds.length > 0) {
+      // Restore saved dialogue options
+      this.currentDialogueOptions = suspect.dialogueOptions.filter((opt) =>
+        savedOptionIds.includes(opt.id)
+      );
+    } else {
+      // Set initial dialogue options (first level questions only)
+      this.currentDialogueOptions = suspect.dialogueOptions.filter(
+        (opt) => !opt.id.includes('_2') && !opt.id.includes('_3') && !opt.id.includes('_4')
+      );
+      // Save initial state
+      GameStateManager.setCurrentDialogueOptions(
+        suspect.id,
+        this.currentDialogueOptions.map((opt) => opt.id)
+      );
+    }
     this.showDialogueOptions();
   }
 
@@ -210,6 +230,21 @@ export class Interrogation extends Scene {
       ? this.currentDialogueOptions
       : this.currentSuspect.dialogueOptions.slice(0, 3);
 
+    if (options.length === 0) {
+      // No more questions available for this dialogue branch
+      this.dialogueContainer.add(createNoirText(this, 0, yOffset + 20, 'NO MORE QUESTIONS', {
+        size: 'medium',
+        color: 'gray',
+        origin: { x: 0.5, y: 0 },
+      }));
+      this.dialogueContainer.add(createNoirText(this, 0, yOffset + 50, 'USE NAVIGATION TO CONTINUE', {
+        size: 'small',
+        color: 'darkGray',
+        origin: { x: 0.5, y: 0 },
+      }));
+      return;
+    }
+
     options.forEach((option, idx) => {
       const optionText = createNoirText(this, -panelWidth / 2 + 15, yOffset, `${idx + 1}. ${option.text.toUpperCase()}`, {
         size: 'small',
@@ -217,10 +252,12 @@ export class Interrogation extends Scene {
         origin: { x: 0, y: 0 },
         maxWidth: panelWidth - 30,
       });
+
       optionText.setInteractive({ useHandCursor: true });
       optionText.on('pointerover', () => optionText.setTint(0xffffff));
       optionText.on('pointerout', () => optionText.clearTint());
       optionText.on('pointerdown', () => this.selectDialogue(option));
+
       this.dialogueContainer!.add(optionText);
       yOffset += mobile ? 45 : 50;
     });
@@ -294,6 +331,13 @@ export class Interrogation extends Scene {
         } else {
           this.currentDialogueOptions = [];
         }
+        // Save current dialogue options to GameStateManager
+        if (this.currentSuspect) {
+          GameStateManager.setCurrentDialogueOptions(
+            this.currentSuspect.id,
+            this.currentDialogueOptions.map((opt) => opt.id)
+          );
+        }
         this.showDialogueOptions();
       },
       padding: { x: 15, y: 8 },
@@ -312,10 +356,15 @@ export class Interrogation extends Scene {
       if (!response.ok) throw new Error(`API error: ${response.status}`);
       const data = (await response.json()) as FindClueResponse;
       this.progress = data.progress;
+      // Update GameStateManager with new progress
+      GameStateManager.updateProgress(data.progress);
       this.showClueNotification(data.clue.name);
     } catch (error) {
       console.error('Failed to find clue:', error);
-      if (this.progress) this.progress.cluesFound.push(clueId);
+      if (this.progress) {
+        this.progress.cluesFound.push(clueId);
+        GameStateManager.updateProgress(this.progress);
+      }
     }
   }
 

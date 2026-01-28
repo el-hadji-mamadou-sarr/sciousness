@@ -157,7 +157,7 @@ export function createNoirButton(
  * Check if device is mobile based on screen width
  */
 export function isMobileScreen(scene: Phaser.Scene): boolean {
-  return scene.scale.width < 500;
+  return scene.scale.width < 768;
 }
 
 /**

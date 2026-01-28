@@ -119,3 +119,32 @@ export type LeaderboardResponse = {
   postId: string;
   stats: LeaderboardStats;
 };
+
+// Points System
+export interface DetectiveProfile {
+  odayNumber: number; // legacy field, kept for compatibility
+  points: number;
+  solvedCases: string[]; // case IDs that have been solved correctly
+  username?: string;
+}
+
+export interface DetectiveLeaderboardEntry {
+  odayNumber: number; // legacy field
+  points: number;
+  solvedCount: number;
+  username: string;
+}
+
+export interface DetectiveLeaderboardResponse {
+  type: 'detective_leaderboard';
+  topDetectives: DetectiveLeaderboardEntry[];
+  userRank?: number;
+  userProfile?: DetectiveProfile;
+}
+
+export interface PointsEarnedResponse {
+  type: 'points_earned';
+  pointsEarned: number;
+  totalPoints: number;
+  alreadySolved: boolean;
+}

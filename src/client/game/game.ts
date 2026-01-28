@@ -10,10 +10,8 @@ import { Interrogation } from './scenes/Interrogation';
 import { Accusation } from './scenes/Accusation';
 import { Evidence } from './scenes/Evidence';
 
-// Detect if we're on desktop (wider screen) or mobile
-const isDesktop = window.innerWidth >= 768;
-const gameWidth = isDesktop ? 1280 : 360;
-const gameHeight = isDesktop ? 720 : 640;
+// Detect if we're on mobile
+const isMobile = window.innerWidth < 768;
 
 //  Find out more information about the Game Config at:
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
@@ -27,10 +25,10 @@ const config: Phaser.Types.Core.GameConfig = {
   roundPixels: false,
   pixelArt: false,
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: isMobile ? Phaser.Scale.FIT : Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: gameWidth,
-    height: gameHeight,
+    width: isMobile ? 360 : '100%',
+    height: isMobile ? 640 : '100%',
   },
   scene: [Boot, Preloader, Loading, MainMenu, CrimeScene, Interrogation, Accusation, Evidence, GameOver],
 };

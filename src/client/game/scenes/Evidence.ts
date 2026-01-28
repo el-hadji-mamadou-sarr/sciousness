@@ -8,6 +8,11 @@ export class Evidence extends Scene {
   private currentCase: Case | null = null;
   private progress: PlayerProgress | null = null;
   private clueContainers: GameObjects.Container[] = [];
+  private scrollContainer: GameObjects.Container | null = null;
+  private scrollY: number = 0;
+  private maxScroll: number = 0;
+  private isDragging: boolean = false;
+  private lastY: number = 0;
 
   constructor() {
     super('Evidence');
@@ -19,6 +24,13 @@ export class Evidence extends Scene {
 
   async create() {
     const { width, height } = this.scale;
+
+    // Reset scroll state
+    this.scrollY = 0;
+    this.maxScroll = 0;
+    this.isDragging = false;
+    this.clueContainers = [];
+    this.scrollContainer = null;
 
     this.cameras.main.setBackgroundColor(0x0a0a14);
     this.createScanlines(width, height);
@@ -93,21 +105,90 @@ export class Evidence extends Scene {
       return;
     }
 
-    const startY = mobile ? 75 : 90;
     const cardHeight = mobile ? 100 : 110;
     const cardSpacing = mobile ? 10 : 12;
+    const scrollAreaTop = mobile ? 75 : 90;
+    const scrollAreaBottom = height - (mobile ? 50 : 70);
+    const scrollAreaHeight = scrollAreaBottom - scrollAreaTop;
 
+    // Create scroll container
+    this.scrollContainer = this.add.container(0, scrollAreaTop);
+
+    // Create mask for scroll area
+    const maskShape = this.make.graphics({});
+    maskShape.fillStyle(0xffffff);
+    maskShape.fillRect(0, scrollAreaTop, width, scrollAreaHeight);
+    const mask = maskShape.createGeometryMask();
+    this.scrollContainer.setMask(mask);
+
+    // Add evidence cards to scroll container
     foundClues.forEach((clue, index) => {
-      const y = startY + index * (cardHeight + cardSpacing);
+      const y = index * (cardHeight + cardSpacing);
       const container = this.createEvidenceCard(clue, width, y, cardHeight);
+      this.scrollContainer!.add(container);
       this.clueContainers.push(container);
+    });
+
+    // Calculate total content height and max scroll
+    const totalContentHeight = foundClues.length * (cardHeight + cardSpacing) - cardSpacing;
+    this.maxScroll = Math.max(0, totalContentHeight - scrollAreaHeight);
+
+    // Only setup scrolling if content overflows
+    if (this.maxScroll > 0) {
+      this.setupScrolling(width, scrollAreaTop, scrollAreaHeight);
+    }
+  }
+
+  private setupScrolling(width: number, scrollAreaTop: number, scrollAreaHeight: number): void {
+    // Create scroll indicator
+    const scrollIndicator = this.add.graphics();
+    const updateScrollIndicator = () => {
+      scrollIndicator.clear();
+      if (this.maxScroll <= 0) return;
+      const scrollRatio = this.scrollY / this.maxScroll;
+      const indicatorHeight = Math.max(30, (scrollAreaHeight / (scrollAreaHeight + this.maxScroll)) * scrollAreaHeight);
+      const indicatorY = scrollAreaTop + scrollRatio * (scrollAreaHeight - indicatorHeight);
+      scrollIndicator.fillStyle(0xffd700, 0.4);
+      scrollIndicator.fillRoundedRect(width - 8, indicatorY, 4, indicatorHeight, 2);
+    };
+    updateScrollIndicator();
+
+    // Create invisible hit area for scroll interaction
+    const hitArea = this.add.rectangle(width / 2, scrollAreaTop + scrollAreaHeight / 2, width, scrollAreaHeight, 0x000000, 0);
+    hitArea.setInteractive();
+
+    // Drag scrolling
+    hitArea.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.isDragging = true;
+      this.lastY = pointer.y;
+    });
+
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!this.isDragging || !this.scrollContainer) return;
+      const deltaY = this.lastY - pointer.y;
+      this.scrollY = Phaser.Math.Clamp(this.scrollY + deltaY, 0, this.maxScroll);
+      this.scrollContainer.y = scrollAreaTop - this.scrollY;
+      this.lastY = pointer.y;
+      updateScrollIndicator();
+    });
+
+    this.input.on('pointerup', () => {
+      this.isDragging = false;
+    });
+
+    // Mouse wheel scrolling
+    hitArea.on('wheel', (_pointer: Phaser.Input.Pointer, _dx: number, _dy: number, dz: number) => {
+      if (!this.scrollContainer) return;
+      this.scrollY = Phaser.Math.Clamp(this.scrollY + dz * 0.5, 0, this.maxScroll);
+      this.scrollContainer.y = scrollAreaTop - this.scrollY;
+      updateScrollIndicator();
     });
   }
 
   private createEvidenceCard(clue: Clue, width: number, y: number, cardHeight: number): GameObjects.Container {
     const mobile = this.isMobile();
-    const container = this.add.container(width / 2, y);
     const cardWidth = width - (mobile ? 20 : 60);
+    const container = this.add.container(width / 2, y);
 
     const bg = this.add.graphics();
     bg.fillStyle(0x16213e, 0.9);
@@ -152,7 +233,7 @@ export class Evidence extends Scene {
     return container;
   }
 
-  private createNavigationButtons(width: number, height: number): void {
+  private createNavigationButtons(_width: number, height: number): void {
     const mobile = this.isMobile();
 
     createNoirButton(this, mobile ? 50 : 70, height - (mobile ? 20 : 28), '[BACK]', {

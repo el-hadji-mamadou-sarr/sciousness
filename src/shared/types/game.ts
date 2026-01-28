@@ -25,6 +25,7 @@ export interface Suspect {
   isGuilty: boolean;
   dialogueOptions: DialogueOption[];
   portrait?: string; // asset key
+  notes?: string
 }
 
 export interface CrimeSceneObject {
@@ -50,6 +51,7 @@ export interface Case {
   crimeSceneObjects: CrimeSceneObject[];
   suspects: Suspect[];
   clues: Clue[];
+  caseNotes?: string
 }
 
 export interface PlayerProgress {

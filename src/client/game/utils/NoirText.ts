@@ -163,19 +163,27 @@ function isTrueMobileDevice(): boolean {
 }
 
 /**
- * Check if device is mobile based on screen width AND device type.
- * A desktop browser in a small container should NOT be treated as mobile.
+ * Check if should use mobile layout.
+ * Mobile layout is used when:
+ * - On a true mobile device with small screen, OR
+ * - On desktop with a very small container (< 500px width)
  */
 export function isMobileScreen(scene: Phaser.Scene): boolean {
-  // Only treat as mobile if it's actually a mobile device
-  // Desktop in a small container (like Reddit embed) should use desktop layout
-  return isTrueMobileDevice() && scene.scale.width < 768;
+  const { width } = scene.scale;
+
+  // On true mobile devices, use mobile layout when screen is small
+  if (isTrueMobileDevice()) {
+    return width < 768;
+  }
+
+  // On desktop, only use mobile layout for very small containers
+  // This handles the case of desktop browser resized to a tiny window
+  return width < 500;
 }
 
 /**
  * Get scale factor for UI elements based on screen size.
- * Scales UP on larger screens (no cap at 1.0) for better desktop experience.
- * Reference resolution: 1920x1080 for desktop, 360x640 for mobile.
+ * Scales proportionally to container size for responsive design.
  */
 export function getScaleFactor(scene: Phaser.Scene): number {
   const { width, height } = scene.scale;
@@ -185,11 +193,14 @@ export function getScaleFactor(scene: Phaser.Scene): number {
     // Mobile: scale based on 360x640 reference
     return Math.min(width / 360, height / 640);
   } else {
-    // Desktop: scale based on container size
-    // Use a smaller reference (1280x720) so UI is larger in smaller containers
+    // Desktop: scale based on container size with 1280x720 reference
+    // This gives reasonable sizes at common resolutions:
+    // - 1280x720: scale = 1.0
+    // - 1920x1080: scale = 1.5
+    // - 640x480: scale = 0.5
     const scale = Math.min(width / 1280, height / 720);
-    // Minimum scale of 0.5 for small containers, max 1.5 for 4K
-    return Math.max(0.5, Math.min(scale, 1.5));
+    // Clamp between 0.4 (small windows) and 1.5 (4K)
+    return Math.max(0.4, Math.min(scale, 1.5));
   }
 }
 

@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@devvit/web": "0.12.9",
-    "devvit": "0.12.9",
+    "devvit": "^0.12.10",
     "express": "5.1.0",
     "phaser": "3.88.2"
   },

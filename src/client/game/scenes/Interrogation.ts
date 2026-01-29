@@ -11,6 +11,7 @@ import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
 import { transitionToScene } from '../utils/SceneTransition';
 import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
 import { GameStateManager } from '../utils/GameStateManager';
+import { QuickNotes } from '../utils/QuickNotes';
 
 export class Interrogation extends Scene {
   private currentCase: Case | null = null;
@@ -20,6 +21,7 @@ export class Interrogation extends Scene {
   private dialogueContainer: GameObjects.Container | null = null;
   private suspectPanel: GameObjects.Container | null = null;
   private currentDialogueOptions: DialogueOption[] = [];
+  private quickNotes: QuickNotes | null = null;
 
   constructor() {
     super('Interrogation');
@@ -50,6 +52,11 @@ export class Interrogation extends Scene {
     this.createDialoguePanel(width, height);
     this.createNavigationButtons(width, height);
     this.showSuspect(this.currentSuspectIndex);
+
+    // Add quick notes button
+    if (this.currentCase) {
+      this.quickNotes = new QuickNotes(this, this.currentCase.id);
+    }
 
     this.scale.on('resize', () => this.scene.restart());
   }
@@ -399,10 +406,9 @@ export class Interrogation extends Scene {
     navBg.lineStyle(1, 0x333333, 0.8);
     navBg.lineBetween(0, height - navHeight, width, height - navHeight);
 
-    // Distribute 3 buttons evenly: at 1/6, 3/6 (center), and 5/6 of width
-    const btnX1 = width / 6;
-    const btnX2 = width / 2;
-    const btnX3 = (width * 5) / 6;
+    // Distribute 2 buttons evenly: at 1/4 and 3/4 of width
+    const btnX1 = width / 4;
+    const btnX2 = (width * 3) / 4;
 
     createNoirButton(this, btnX1, btnY, '[SCENE]', {
       size: 'small',
@@ -412,15 +418,7 @@ export class Interrogation extends Scene {
       padding: { x: mobile ? 8 : 12, y: 8 },
     });
 
-    createNoirButton(this, btnX2, btnY, mobile ? '[NOTES]' : '[NOTEBOOK]', {
-      size: 'small',
-      color: 'gold',
-      hoverColor: 'white',
-      onClick: () => transitionToScene(this, 'Notebook', { returnTo: 'Interrogation' }),
-      padding: { x: mobile ? 8 : 12, y: 8 },
-    });
-
-    createNoirButton(this, btnX3, btnY, '[ACCUSE]', {
+    createNoirButton(this, btnX2, btnY, '[ACCUSE]', {
       size: 'small',
       color: 'red',
       hoverColor: 'gold',

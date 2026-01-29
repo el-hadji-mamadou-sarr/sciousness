@@ -5,6 +5,7 @@ import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
 import { transitionToScene } from '../utils/SceneTransition';
 import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
 import { GameStateManager } from '../utils/GameStateManager';
+import { QuickNotes } from '../utils/QuickNotes';
 
 export class Accusation extends Scene {
   private currentCase: Case | null = null;
@@ -12,6 +13,7 @@ export class Accusation extends Scene {
   private selectedSuspect: Suspect | null = null;
   private suspectButtons: GameObjects.Container[] = [];
   private confirmPanel: GameObjects.Container | null = null;
+  private quickNotes: QuickNotes | null = null;
 
   constructor() {
     super('Accusation');
@@ -50,6 +52,11 @@ export class Accusation extends Scene {
     this.createSuspectSelection(width);
     this.createConfirmPanel(width, height);
     this.createNavigationButtons(width, height);
+
+    // Add quick notes button
+    if (this.currentCase) {
+      this.quickNotes = new QuickNotes(this, this.currentCase.id);
+    }
 
     this.scale.on('resize', () => this.scene.restart());
   }
@@ -285,32 +292,12 @@ export class Accusation extends Scene {
     navBg.lineStyle(1, 0x333333, 0.8);
     navBg.lineBetween(0, height - navHeight, width, height - navHeight);
 
-    // Distribute 3 buttons evenly: at 1/6, 3/6 (center), and 5/6 of width
-    const btnX1 = width / 6;
-    const btnX2 = width / 2;
-    const btnX3 = (width * 5) / 6;
-
-    createNoirButton(this, btnX1, btnY, '[SCENE]', {
+    // Single back button centered
+    createNoirButton(this, width / 2, btnY, '[BACK]', {
       size: 'small',
       color: 'gray',
       hoverColor: 'white',
       onClick: () => transitionToScene(this, 'CrimeScene'),
-      padding: { x: mobile ? 8 : 12, y: 8 },
-    });
-
-    createNoirButton(this, btnX2, btnY, mobile ? '[NOTES]' : '[NOTEBOOK]', {
-      size: 'small',
-      color: 'gold',
-      hoverColor: 'white',
-      onClick: () => transitionToScene(this, 'Notebook', { returnTo: 'Accusation' }),
-      padding: { x: mobile ? 8 : 12, y: 8 },
-    });
-
-    createNoirButton(this, btnX3, btnY, '[ACCUSE]', {
-      size: 'small',
-      color: 'red',
-      hoverColor: 'gold',
-      onClick: () => {}, // Already on accusation screen
       padding: { x: mobile ? 8 : 12, y: 8 },
     });
   }

@@ -1,9 +1,10 @@
 import { Scene, GameObjects } from 'phaser';
-import { Case, PlayerProgress, InitGameResponse } from '../../../shared/types/game';
+import { Case, PlayerProgress, InitGameResponse, WeeklyCase, WeeklyProgress, ChapterStatus } from '../../../shared/types/game';
 import { context } from '@devvit/web/client';
 import { transitionToScene } from '../utils/SceneTransition';
 import { createNoirText, createNoirButton, isMobileScreen, getScaleFactor } from '../utils/NoirText';
 import { AudioManager } from '../utils/AudioManager';
+import { GameStateManager } from '../utils/GameStateManager';
 
 // Admin usernames that can play unlimited times for testing
 const ADMIN_USERNAMES = ['ashscars'];
@@ -23,6 +24,13 @@ export class MainMenu extends Scene {
 
   private currentCase: Case | null = null;
   private progress: PlayerProgress | null = null;
+
+  // Weekly mode properties
+  private isWeeklyMode: boolean = false;
+  private weeklyCase: WeeklyCase | null = null;
+  private weeklyProgress: WeeklyProgress | null = null;
+  private chapterStatuses: ChapterStatus[] = [];
+  private currentDayNumber: number = 1;
 
   constructor() {
     super('MainMenu');
@@ -44,6 +52,12 @@ export class MainMenu extends Scene {
     this.footer = null;
     this.statusText = null;
     this.statusBadge = null;
+    // Reset weekly mode properties
+    this.isWeeklyMode = false;
+    this.weeklyCase = null;
+    this.weeklyProgress = null;
+    this.chapterStatuses = [];
+    this.currentDayNumber = 1;
   }
 
   async create() {
@@ -56,12 +70,29 @@ export class MainMenu extends Scene {
   }
 
   private async loadGameData(): Promise<void> {
+    // Try weekly mode first using GameStateManager
+    try {
+      const weeklyData = await GameStateManager.loadWeeklyGameData();
+      if (weeklyData.weeklyCase) {
+        this.isWeeklyMode = true;
+        this.weeklyCase = weeklyData.weeklyCase;
+        this.weeklyProgress = weeklyData.weeklyProgress;
+        this.chapterStatuses = weeklyData.chapterStatuses;
+        this.currentDayNumber = weeklyData.currentDayNumber;
+        return;
+      }
+    } catch (error) {
+      console.log('Weekly mode not available, falling back to daily mode');
+    }
+
+    // Fall back to daily mode
     try {
       const response = await fetch('/api/game/init');
       if (!response.ok) throw new Error(`API error: ${response.status}`);
       const data = (await response.json()) as InitGameResponse;
       this.currentCase = data.currentCase;
       this.progress = data.progress;
+      this.isWeeklyMode = false;
     } catch (error) {
       console.error('Failed to load game data:', error);
       this.progress = { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
@@ -77,14 +108,27 @@ export class MainMenu extends Scene {
     if (this.isAdmin()) {
       return false;
     }
+    if (this.isWeeklyMode) {
+      return this.weeklyProgress?.solved === true;
+    }
     return this.progress?.solved === true;
   }
 
   private wasCorrect(): boolean {
+    if (this.isWeeklyMode) {
+      return this.weeklyProgress?.correct === true;
+    }
     return this.progress?.correct === true;
   }
 
   private async startGame(): Promise<void> {
+    if (this.isWeeklyMode) {
+      // Route to WeekOverview for weekly mode
+      transitionToScene(this, 'WeekOverview');
+      return;
+    }
+
+    // Daily mode
     if (this.isAdmin() && this.progress?.solved) {
       try {
         await fetch('/api/game/reset', { method: 'POST' });
@@ -135,14 +179,16 @@ export class MainMenu extends Scene {
       this.title.setPosition(width / 2, height * (mobile ? 0.14 : 0.16));
     }
 
-    // Subtitle
+    // Subtitle - different for weekly vs daily mode
+    const subtitleText = this.isWeeklyMode ? 'THE WEEKLY MURDER MYSTERY' : 'THE DAILY MURDER MYSTERY';
     if (!this.subtitle) {
-      this.subtitle = createNoirText(this, width / 2, height * (mobile ? 0.22 : 0.24), 'THE DAILY MURDER MYSTERY', {
+      this.subtitle = createNoirText(this, width / 2, height * (mobile ? 0.22 : 0.24), subtitleText, {
         size: 'small',
         color: 'gray',
         origin: { x: 0.5, y: 0.5 },
       });
     } else {
+      this.subtitle.setText(subtitleText);
       this.subtitle.setPosition(width / 2, height * (mobile ? 0.22 : 0.24));
     }
 
@@ -150,10 +196,17 @@ export class MainMenu extends Scene {
     this.noirBg.lineStyle(2, 0xff4444, 0.4);
     this.noirBg.lineBetween(width * 0.25, height * 0.29, width * 0.75, height * 0.29);
 
-    // Case title
-    const caseNum = this.currentCase?.dayNumber ?? 1;
-    const caseTitle = this.currentCase?.title ?? "THE MODERATOR'S LAST BAN";
-    const caseTitleText = `CASE #${String(caseNum).padStart(3, '0')}:\n${caseTitle.toUpperCase()}`;
+    // Case title - different format for weekly vs daily mode
+    let caseTitleText: string;
+    if (this.isWeeklyMode && this.weeklyCase) {
+      const weekNum = this.weeklyCase.weekNumber;
+      const caseTitle = this.weeklyCase.title;
+      caseTitleText = `WEEK ${weekNum} CASE:\n${caseTitle.toUpperCase()}`;
+    } else {
+      const caseNum = this.currentCase?.dayNumber ?? 1;
+      const caseTitle = this.currentCase?.title ?? "THE MODERATOR'S LAST BAN";
+      caseTitleText = `CASE #${String(caseNum).padStart(3, '0')}:\n${caseTitle.toUpperCase()}`;
+    }
 
     if (!this.caseTitle) {
       this.caseTitle = createNoirText(this, width / 2, height * (mobile ? 0.36 : 0.36), caseTitleText, {
@@ -230,10 +283,18 @@ export class MainMenu extends Scene {
       this.statusBadge.setVisible(false);
     }
 
-    // Instructions
-    const instructionText = mobile
-      ? 'TAP CLUES - INTERROGATE - SOLVE'
-      : 'EXAMINE CLUES - INTERROGATE SUSPECTS - SOLVE THE CASE';
+    // Instructions - different for weekly vs daily mode
+    let instructionText: string;
+    if (this.isWeeklyMode) {
+      const dayInfo = this.currentDayNumber <= 6 ? `DAY ${this.currentDayNumber} OF 7` : 'ACCUSATION DAY';
+      instructionText = mobile
+        ? `${dayInfo} - NEW CHAPTER DAILY`
+        : `${dayInfo} - A NEW CHAPTER UNLOCKS EACH DAY`;
+    } else {
+      instructionText = mobile
+        ? 'TAP CLUES - INTERROGATE - SOLVE'
+        : 'EXAMINE CLUES - INTERROGATE SUSPECTS - SOLVE THE CASE';
+    }
     if (!this.instructions) {
       this.instructions = createNoirText(this, width / 2, height * (mobile ? 0.68 : 0.68), instructionText, {
         size: 'small',
@@ -304,7 +365,9 @@ export class MainMenu extends Scene {
     this.viewResultButton.setVisible(true);
 
     // Update instructions for returning players
-    const instructionText = 'COME BACK TOMORROW FOR A NEW CASE!';
+    const instructionText = this.isWeeklyMode
+      ? 'COME BACK NEXT WEEK FOR A NEW CASE!'
+      : 'COME BACK TOMORROW FOR A NEW CASE!';
     if (!this.instructions) {
       this.instructions = createNoirText(this, width / 2, height * (mobile ? 0.82 : 0.82), instructionText, {
         size: 'small',
@@ -319,6 +382,28 @@ export class MainMenu extends Scene {
   }
 
   private goToResultScreen(): void {
+    if (this.isWeeklyMode) {
+      if (!this.weeklyCase || !this.weeklyProgress) return;
+
+      const guiltySuspect = this.weeklyCase.suspects.find(s => s.id === this.weeklyCase?.guiltySubjectId);
+      const accusedSuspect = this.weeklyCase.suspects.find(s => s.id === this.weeklyProgress?.accusedSuspect);
+
+      const linkedClues = this.weeklyCase.allClues.filter(c => c.linkedTo === guiltySuspect?.id);
+      const evidence = linkedClues.map(c => c.name);
+
+      transitionToScene(this, 'GameOver', {
+        correct: this.weeklyProgress.correct,
+        accusedName: accusedSuspect?.name ?? 'Unknown',
+        guiltyName: guiltySuspect?.name ?? 'Unknown',
+        evidence: evidence,
+        isWeeklyMode: true,
+        weeklyCase: this.weeklyCase,
+        weeklyProgress: this.weeklyProgress,
+      });
+      return;
+    }
+
+    // Daily mode
     if (!this.currentCase || !this.progress) return;
 
     const guiltySuspect = this.currentCase.suspects.find(s => s.isGuilty);

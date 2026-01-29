@@ -4,6 +4,9 @@ import {
   Clue,
   PlayerProgress,
   FindClueResponse,
+  WeeklyCase,
+  WeeklyProgress,
+  CrimeSceneObject,
 } from '../../../shared/types/game';
 import { case1 } from './crime-scenes/case1';
 import { drawCrimeSceneObject } from '../utils/ProceduralGraphics';
@@ -11,6 +14,14 @@ import { transitionToScene } from '../utils/SceneTransition';
 import { createNoirText, createNoirButton, isMobileScreen, getScaleFactor } from '../utils/NoirText';
 import { GameStateManager } from '../utils/GameStateManager';
 import { QuickNotes } from '../utils/QuickNotes';
+
+// Weekly mode scene data interface
+interface WeeklyCrimeSceneData {
+  weeklyMode?: boolean;
+  weeklyCase?: WeeklyCase;
+  progress?: WeeklyProgress;
+  currentChapter?: number;
+}
 
 // Evidence item positions on the crime board
 interface BoardItem {
@@ -35,12 +46,34 @@ export class CrimeScene extends Scene {
   private boardContainer: GameObjects.Container | null = null;
   private quickNotes: QuickNotes | null = null;
 
+  // Weekly mode properties
+  private weeklyMode: boolean = false;
+  private weeklyCase: WeeklyCase | null = null;
+  private weeklyProgress: WeeklyProgress | null = null;
+  private currentChapter: number = 1;
+
   constructor() {
     super('CrimeScene');
   }
 
   private isMobile(): boolean {
     return isMobileScreen(this);
+  }
+
+  init(data?: WeeklyCrimeSceneData): void {
+    // Reset weekly mode properties
+    this.weeklyMode = false;
+    this.weeklyCase = null;
+    this.weeklyProgress = null;
+    this.currentChapter = 1;
+
+    // Check if we're in weekly mode
+    if (data?.weeklyMode && data.weeklyCase) {
+      this.weeklyMode = true;
+      this.weeklyCase = data.weeklyCase;
+      this.weeklyProgress = data.progress || null;
+      this.currentChapter = data.currentChapter || 1;
+    }
   }
 
   async create() {
@@ -75,6 +108,14 @@ export class CrimeScene extends Scene {
   }
 
   private async loadGameData(): Promise<void> {
+    // If in weekly mode, construct a Case from weekly data
+    if (this.weeklyMode && this.weeklyCase) {
+      this.currentCase = this.buildCaseFromWeeklyData();
+      this.progress = this.buildProgressFromWeeklyData();
+      return;
+    }
+
+    // Standard daily mode
     try {
       const data = await GameStateManager.loadGameData();
       this.currentCase = data.currentCase;
@@ -83,6 +124,63 @@ export class CrimeScene extends Scene {
       console.error('Failed to load game data:', error);
       this.createFallbackCase();
     }
+  }
+
+  // Build a Case object from WeeklyCase data, filtered by current chapter
+  private buildCaseFromWeeklyData(): Case {
+    if (!this.weeklyCase) {
+      return { ...case1 };
+    }
+
+    // Get all crime scene objects from chapters up to and including current chapter
+    const availableObjects: CrimeSceneObject[] = [];
+    const availableClues: Clue[] = [];
+
+    for (const chapter of this.weeklyCase.chapters) {
+      if (chapter.dayNumber <= this.currentChapter) {
+        availableObjects.push(...chapter.crimeSceneObjects);
+        availableClues.push(...chapter.newClues);
+      }
+    }
+
+    return {
+      id: this.weeklyCase.id,
+      title: this.weeklyCase.title,
+      dayNumber: this.currentChapter,
+      intro: this.weeklyCase.overallIntro,
+      victimName: this.weeklyCase.victimName,
+      victimDescription: this.weeklyCase.victimDescription,
+      location: this.weeklyCase.location,
+      crimeSceneObjects: availableObjects,
+      suspects: this.weeklyCase.suspects.filter(s =>
+        this.weeklyProgress?.suspectsRevealed.includes(s.id)
+      ),
+      clues: availableClues,
+    };
+  }
+
+  // Build PlayerProgress from WeeklyProgress
+  private buildProgressFromWeeklyData(): PlayerProgress {
+    if (!this.weeklyProgress) {
+      return { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
+    }
+
+    // Flatten all found clues from all chapters
+    const allFoundClues = Object.values(this.weeklyProgress.cluesFoundByChapter).flat();
+
+    const progress: PlayerProgress = {
+      odayNumber: this.currentChapter,
+      cluesFound: allFoundClues,
+      suspectsInterrogated: this.weeklyProgress.witnessesInterrogated,
+      solved: this.weeklyProgress.solved,
+      correct: this.weeklyProgress.correct,
+    };
+
+    if (this.weeklyProgress.accusedSuspect) {
+      progress.accusedSuspect = this.weeklyProgress.accusedSuspect;
+    }
+
+    return progress;
   }
 
   private createFallbackCase(): void {
@@ -493,6 +591,23 @@ export class CrimeScene extends Scene {
 
   private async findClue(clueId: string): Promise<void> {
     try {
+      // Use different API for weekly mode
+      if (this.weeklyMode) {
+        const response = await fetch('/api/weekly/find-clue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clueId, chapterDay: this.currentChapter }),
+        });
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data = await response.json();
+        this.weeklyProgress = data.progress;
+        this.progress = this.buildProgressFromWeeklyData();
+        this.updateCluePanel();
+        this.showClueFoundNotification(data.clue);
+        return;
+      }
+
+      // Standard daily mode
       const response = await fetch('/api/game/find-clue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -509,7 +624,9 @@ export class CrimeScene extends Scene {
       console.error('Failed to find clue:', error);
       if (this.progress && !this.progress.cluesFound.includes(clueId)) {
         this.progress.cluesFound.push(clueId);
-        GameStateManager.updateProgress(this.progress);
+        if (!this.weeklyMode) {
+          GameStateManager.updateProgress(this.progress);
+        }
         this.updateCluePanel();
       }
     }
@@ -692,15 +809,15 @@ export class CrimeScene extends Scene {
       size: 'small',
       color: 'green',
       hoverColor: 'cyan',
-      onClick: () => transitionToScene(this, 'Interrogation'),
+      onClick: () => this.goToInterrogation(),
       padding: { x: mobile ? 8 : 12, y: 8 },
     });
 
-    createNoirButton(this, btnX2, btnY, '[NOTES]', {
+    createNoirButton(this, btnX2, btnY, this.weeklyMode ? '[BACK]' : '[NOTES]', {
       size: 'small',
       color: 'gold',
       hoverColor: 'white',
-      onClick: () => this.quickNotes?.open(),
+      onClick: () => this.weeklyMode ? this.goBack() : this.quickNotes?.open(),
       padding: { x: mobile ? 8 : 12, y: 8 },
     });
 
@@ -708,7 +825,7 @@ export class CrimeScene extends Scene {
       size: 'small',
       color: 'red',
       hoverColor: 'gold',
-      onClick: () => transitionToScene(this, 'Accusation'),
+      onClick: () => this.goToAccusation(),
       padding: { x: mobile ? 8 : 12, y: 8 },
     });
   }
@@ -716,5 +833,42 @@ export class CrimeScene extends Scene {
   private handleResize(width: number, height: number): void {
     this.cameras.resize(width, height);
     this.scene.restart();
+  }
+
+  private goToInterrogation(): void {
+    if (this.weeklyMode) {
+      transitionToScene(this, 'Interrogation', {
+        weeklyMode: true,
+        weeklyCase: this.weeklyCase,
+        progress: this.weeklyProgress,
+        currentChapter: this.currentChapter,
+      });
+    } else {
+      transitionToScene(this, 'Interrogation');
+    }
+  }
+
+  private goToAccusation(): void {
+    if (this.weeklyMode) {
+      transitionToScene(this, 'Accusation', {
+        weeklyMode: true,
+        weeklyCase: this.weeklyCase,
+        progress: this.weeklyProgress,
+      });
+    } else {
+      transitionToScene(this, 'Accusation');
+    }
+  }
+
+  private goBack(): void {
+    if (this.weeklyMode) {
+      transitionToScene(this, 'ChapterScene', {
+        dayNumber: this.currentChapter,
+        weeklyCase: this.weeklyCase,
+        progress: this.weeklyProgress,
+      });
+    } else {
+      transitionToScene(this, 'MainMenu');
+    }
   }
 }

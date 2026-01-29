@@ -1,11 +1,26 @@
 import { Scene, GameObjects } from 'phaser';
-import { Case, Suspect, PlayerProgress, AccuseResponse } from '../../../shared/types/game';
+import {
+  Case,
+  Suspect,
+  PlayerProgress,
+  AccuseResponse,
+  WeeklyCase,
+  WeeklyProgress,
+  WeeklyAccuseResponse,
+} from '../../../shared/types/game';
 import { case1 } from './crime-scenes/case1';
 import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
 import { transitionToScene } from '../utils/SceneTransition';
 import { createNoirText, createNoirButton, isMobileScreen, getScaleFactor } from '../utils/NoirText';
 import { GameStateManager } from '../utils/GameStateManager';
 import { QuickNotes } from '../utils/QuickNotes';
+
+// Weekly mode scene data interface
+interface WeeklyAccusationData {
+  weeklyMode?: boolean;
+  weeklyCase?: WeeklyCase;
+  progress?: WeeklyProgress;
+}
 
 export class Accusation extends Scene {
   private currentCase: Case | null = null;
@@ -23,6 +38,12 @@ export class Accusation extends Scene {
   private hasMoved: boolean = false;
   private panelWasVisible: boolean = false;
 
+  // Weekly mode properties
+  private weeklyMode: boolean = false;
+  private weeklyCase: WeeklyCase | null = null;
+  private weeklyProgress: WeeklyProgress | null = null;
+  private isAccusationUnlocked: boolean = false;
+
   constructor() {
     super('Accusation');
   }
@@ -31,11 +52,37 @@ export class Accusation extends Scene {
     return isMobileScreen(this);
   }
 
+  init(data?: WeeklyAccusationData): void {
+    // Reset weekly mode properties
+    this.weeklyMode = false;
+    this.weeklyCase = null;
+    this.weeklyProgress = null;
+    this.isAccusationUnlocked = true; // Default to true for daily mode
+
+    // Check if we're in weekly mode
+    if (data?.weeklyMode && data.weeklyCase) {
+      this.weeklyMode = true;
+      this.weeklyCase = data.weeklyCase;
+      this.weeklyProgress = data.progress || null;
+
+      // Check if it's Sunday (day 7)
+      const dayOfWeek = new Date().getDay();
+      this.isAccusationUnlocked = dayOfWeek === 0; // 0 = Sunday
+    }
+  }
+
   async create() {
     const { width, height } = this.scale;
 
     this.cameras.main.setBackgroundColor(0x0a0a14);
     this.createScanlines(width, height);
+
+    // Check if accusation is locked in weekly mode
+    if (this.weeklyMode && !this.isAccusationUnlocked) {
+      this.createLockedState(width, height);
+      this.scale.on('resize', () => this.scene.restart());
+      return;
+    }
 
     createNoirText(this, width / 2, this.isMobile() ? 18 : 28, 'ACCUSATION', {
       size: 'large',
@@ -69,6 +116,72 @@ export class Accusation extends Scene {
     this.scale.on('resize', () => this.scene.restart());
   }
 
+  private createLockedState(width: number, height: number): void {
+    const mobile = this.isMobile();
+
+    // Title
+    createNoirText(this, width / 2, mobile ? 30 : 50, 'ACCUSATION LOCKED', {
+      size: 'large',
+      color: 'red',
+      origin: { x: 0.5, y: 0.5 },
+    });
+
+    // Lock icon (procedural)
+    const lockGraphics = this.add.graphics();
+    const lockX = width / 2;
+    const lockY = height / 2 - 40;
+    const lockSize = mobile ? 40 : 60;
+
+    // Lock body
+    lockGraphics.fillStyle(0x666666, 1);
+    lockGraphics.fillRoundedRect(lockX - lockSize / 2, lockY, lockSize, lockSize * 0.8, 5);
+
+    // Lock shackle
+    lockGraphics.lineStyle(8, 0x666666, 1);
+    lockGraphics.beginPath();
+    lockGraphics.arc(lockX, lockY, lockSize * 0.35, Math.PI, 0, false);
+    lockGraphics.strokePath();
+
+    // Keyhole
+    lockGraphics.fillStyle(0x333333, 1);
+    lockGraphics.fillCircle(lockX, lockY + lockSize * 0.3, lockSize * 0.12);
+    lockGraphics.fillRect(lockX - lockSize * 0.05, lockY + lockSize * 0.3, lockSize * 0.1, lockSize * 0.25);
+
+    // Message
+    createNoirText(this, width / 2, height / 2 + 40, 'ACCUSATIONS UNLOCK ON SUNDAY', {
+      size: 'medium',
+      color: 'gold',
+      origin: { x: 0.5, y: 0.5 },
+    });
+
+    createNoirText(this, width / 2, height / 2 + 75, 'CONTINUE INVESTIGATING UNTIL THEN', {
+      size: 'small',
+      color: 'gray',
+      origin: { x: 0.5, y: 0.5 },
+    });
+
+    // Calculate days until Sunday
+    const today = new Date().getDay();
+    const daysUntilSunday = today === 0 ? 0 : 7 - today;
+
+    if (daysUntilSunday > 0) {
+      createNoirText(this, width / 2, height / 2 + 110, `${daysUntilSunday} DAY${daysUntilSunday > 1 ? 'S' : ''} REMAINING`, {
+        size: 'small',
+        color: 'cyan',
+        origin: { x: 0.5, y: 0.5 },
+      });
+    }
+
+    // Back button
+    createNoirButton(this, width / 2, height - (mobile ? 60 : 80), '[ BACK TO OVERVIEW ]', {
+      size: 'medium',
+      color: 'white',
+      hoverColor: 'gold',
+      onClick: () => transitionToScene(this, 'WeekOverview'),
+      padding: { x: 25, y: 12 },
+    });
+  }
+
   private createScanlines(width: number, height: number): void {
     const graphics = this.add.graphics();
     const spacing = this.isMobile() ? 5 : 3;
@@ -79,6 +192,14 @@ export class Accusation extends Scene {
   }
 
   private async loadGameData(): Promise<void> {
+    // If in weekly mode, build case from weekly data
+    if (this.weeklyMode && this.weeklyCase) {
+      this.currentCase = this.buildCaseFromWeeklyData();
+      this.progress = this.buildProgressFromWeeklyData();
+      return;
+    }
+
+    // Standard daily mode
     try {
       const data = await GameStateManager.loadGameData();
       this.currentCase = data.currentCase;
@@ -92,6 +213,49 @@ export class Accusation extends Scene {
   private createFallbackCase(): void {
     this.currentCase = { ...case1 };
     this.progress = { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
+  }
+
+  // Build a Case object from WeeklyCase data
+  private buildCaseFromWeeklyData(): Case {
+    if (!this.weeklyCase) {
+      return { ...case1 };
+    }
+
+    return {
+      id: this.weeklyCase.id,
+      title: this.weeklyCase.title,
+      dayNumber: 7, // Accusation day
+      intro: this.weeklyCase.overallIntro,
+      victimName: this.weeklyCase.victimName,
+      victimDescription: this.weeklyCase.victimDescription,
+      location: this.weeklyCase.location,
+      crimeSceneObjects: [],
+      suspects: this.weeklyCase.suspects,
+      clues: this.weeklyCase.allClues,
+    };
+  }
+
+  // Build PlayerProgress from WeeklyProgress
+  private buildProgressFromWeeklyData(): PlayerProgress {
+    if (!this.weeklyProgress) {
+      return { odayNumber: 7, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
+    }
+
+    const allFoundClues = Object.values(this.weeklyProgress.cluesFoundByChapter).flat();
+
+    const progress: PlayerProgress = {
+      odayNumber: 7,
+      cluesFound: allFoundClues,
+      suspectsInterrogated: this.weeklyProgress.witnessesInterrogated,
+      solved: this.weeklyProgress.solved,
+      correct: this.weeklyProgress.correct,
+    };
+
+    if (this.weeklyProgress.accusedSuspect) {
+      progress.accusedSuspect = this.weeklyProgress.accusedSuspect;
+    }
+
+    return progress;
   }
 
   private createSuspectSelection(width: number): void {
@@ -335,15 +499,31 @@ export class Accusation extends Scene {
     let isCorrect = this.selectedSuspect.isGuilty;
 
     try {
-      const response = await fetch('/api/game/accuse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ suspectId: this.selectedSuspect.id }),
-      });
-      if (response.ok) {
-        const data = (await response.json()) as AccuseResponse;
-        isCorrect = data.correct;
-        this.progress = data.progress;
+      // Use different API for weekly mode
+      if (this.weeklyMode) {
+        const response = await fetch('/api/weekly/accuse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ suspectId: this.selectedSuspect.id }),
+        });
+        if (response.ok) {
+          const data = (await response.json()) as WeeklyAccuseResponse;
+          isCorrect = data.correct;
+          this.weeklyProgress = data.progress;
+          this.progress = this.buildProgressFromWeeklyData();
+        }
+      } else {
+        // Standard daily mode
+        const response = await fetch('/api/game/accuse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ suspectId: this.selectedSuspect.id }),
+        });
+        if (response.ok) {
+          const data = (await response.json()) as AccuseResponse;
+          isCorrect = data.correct;
+          this.progress = data.progress;
+        }
       }
     } catch (error) {
       console.error('Failed to make accusation:', error);

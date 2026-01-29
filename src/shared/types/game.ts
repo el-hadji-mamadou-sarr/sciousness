@@ -277,3 +277,137 @@ export interface PointsEarnedResponse {
   totalPoints: number;
   alreadySolved: boolean;
 }
+
+// ============================================
+// WEEKLY CASE SYSTEM TYPES
+// ============================================
+
+// Witness is like Suspect but appears in specific chapters
+export interface Witness {
+  id: string;
+  name: string;
+  description: string;
+  availableOnDay: number; // Which day this witness becomes available
+  dialogueOptions: DialogueOption[];
+  portrait?: string;
+}
+
+// Chapter represents a single day's content in a weekly case
+export interface Chapter {
+  dayNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  title: string;
+  intro: string; // Story narration for this day
+  storyText: string; // Main narrative content
+  crimeSceneObjects: CrimeSceneObject[]; // New evidence locations for this day
+  newClues: Clue[]; // Clues discoverable on this day
+  witnesses: Witness[]; // New NPCs to interrogate this day
+  suspectsRevealed: string[]; // Suspect IDs revealed on this day
+  isAccusationDay: boolean; // true only for day 7
+}
+
+// WeeklyCase contains the full 7-day mystery
+export interface WeeklyCase {
+  id: string;
+  weekNumber: number; // Which week of the year this case runs
+  startDate: string; // ISO date string (Monday start)
+  title: string;
+  overallIntro: string; // Full case intro shown on day 1
+  victimName: string;
+  victimDescription: string;
+  location: string;
+  chapters: Chapter[];
+  suspects: Suspect[]; // All suspects for the week (revealed progressively)
+  allClues: Clue[]; // Master list of all clues
+  guiltySubjectId: string; // The actual killer
+}
+
+// Weekly progress tracks chapter completion
+export interface WeeklyProgress {
+  caseId: string;
+  odayNumber: number; // Legacy compatibility
+  chaptersCompleted: number[]; // Array of completed day numbers [1, 2, 3]
+  currentChapter: number; // Current day being played
+  cluesFoundByChapter: Record<number, string[]>; // Day -> clue IDs
+  witnessesInterrogated: string[];
+  suspectsRevealed: string[]; // Suspects unlocked so far
+  accusedSuspect?: string;
+  solved: boolean;
+  correct: boolean;
+  dailyBonusEarned: Record<number, boolean>; // Day -> earned daily bonus
+  consecutiveDaysPlayed: number;
+  lastPlayedDate?: string; // ISO date string for streak tracking
+}
+
+// Chapter availability status for UI
+export interface ChapterStatus {
+  dayNumber: number;
+  title: string;
+  isUnlocked: boolean; // Based on current date
+  isCompleted: boolean; // Player finished this chapter
+  isAvailable: boolean; // Unlocked AND previous chapters done
+  isCurrent: boolean; // Currently playable
+}
+
+// Weekly Points Configuration
+export const WEEKLY_POINTS = {
+  CHAPTER_COMPLETE: 15,           // Base points per chapter
+  ON_TIME_BONUS: 5,               // Playing on the same day it unlocks
+  STREAK_MULTIPLIER_PER_DAY: 0.1, // 10% per consecutive day, max 50%
+  CORRECT_ACCUSATION: 200,        // Sunday accusation correct
+  WRONG_ACCUSATION: 0,            // Sunday accusation wrong
+  FULL_WEEK_BONUS: 100,           // Played all 7 days
+  ALL_CLUES_BONUS: 50,            // Found every clue
+};
+
+// Weekly API Types
+export type InitWeeklyGameResponse = {
+  type: 'init_weekly_game';
+  postId: string;
+  weeklyCase: WeeklyCase;
+  progress: WeeklyProgress;
+  chapterStatuses: ChapterStatus[];
+  currentDayNumber: number; // Real-world day of week (1-7, Mon-Sun)
+  isAccusationUnlocked: boolean;
+};
+
+export type CompleteChapterRequest = {
+  chapterDay: number;
+};
+
+export type CompleteChapterResponse = {
+  type: 'complete_chapter';
+  postId: string;
+  progress: WeeklyProgress;
+  pointsEarned: number;
+  streakBonus: number;
+  onTimeBonus: number;
+  nextChapterUnlocked: boolean;
+};
+
+export type WeeklyFindClueResponse = {
+  type: 'weekly_find_clue';
+  postId: string;
+  clue: Clue;
+  progress: WeeklyProgress;
+  chapterDay: number;
+};
+
+export type WeeklyAccuseResponse = {
+  type: 'weekly_accuse';
+  postId: string;
+  correct: boolean;
+  suspect: Suspect;
+  progress: WeeklyProgress;
+  pointsEarned: number;
+  weeklyBonus: number; // Extra points for full week participation
+  chaptersPlayedBonus: number;
+  totalPoints: number;
+  newAchievements?: AchievementId[];
+};
+
+export type WeeklyProgressResponse = {
+  type: 'weekly_progress';
+  postId: string;
+  progress: WeeklyProgress;
+  chapterStatuses: ChapterStatus[];
+};

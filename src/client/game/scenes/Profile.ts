@@ -295,14 +295,17 @@ export class Profile extends Scene {
         }));
       });
     } else {
-      // Horizontal layout for desktop
-      const colWidth = panelWidth / 4;
+      // 2x2 grid for desktop as well (to prevent text overlap)
+      const colWidth = panelWidth / 2;
+      const rowHeight = (panelHeight - 30) / 2; // Leave space for accuracy at bottom
 
       stats.forEach((stat, i) => {
-        const statX = -panelWidth / 2 + colWidth * i + colWidth / 2;
-        const statY = panelHeight / 2;
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const statX = -panelWidth / 2 + colWidth * col + colWidth / 2;
+        const statY = rowHeight * row + rowHeight / 2 + 5;
 
-        container.add(createNoirText(this, statX, statY - 20, stat.value, {
+        container.add(createNoirText(this, statX, statY - 15, stat.value, {
           size: 'large',
           color: stat.color,
           origin: { x: 0.5, y: 0.5 },
@@ -312,21 +315,11 @@ export class Profile extends Scene {
           size: 'small',
           color: 'gray',
           origin: { x: 0.5, y: 0.5 },
-          scale: 0.7,
+          scale: 0.8,
         }));
       });
     }
 
-    // Accuracy stat at bottom
-    const accuracy = profile.totalAccusations > 0
-      ? Math.round((profile.correctAccusations / profile.totalAccusations) * 100)
-      : 0;
-
-    container.add(createNoirText(this, 0, panelHeight - 15, `ACCURACY: ${accuracy}%`, {
-      size: 'small',
-      color: accuracy >= 70 ? 'green' : accuracy >= 40 ? 'gold' : 'red',
-      origin: { x: 0.5, y: 0.5 },
-    }));
   }
 
   private createAchievementsSection(x: number, y: number, sectionWidth: number, sectionHeight: number, mobile: boolean): void {

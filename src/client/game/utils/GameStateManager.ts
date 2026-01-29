@@ -1,4 +1,12 @@
-import { Case, PlayerProgress, InitGameResponse } from '../../../shared/types/game';
+import {
+  Case,
+  PlayerProgress,
+  InitGameResponse,
+  WeeklyCase,
+  WeeklyProgress,
+  ChapterStatus,
+  InitWeeklyGameResponse,
+} from '../../../shared/types/game';
 
 /**
  * Tracks dialogue state for a single suspect
@@ -20,6 +28,18 @@ interface GameState {
 }
 
 /**
+ * Weekly game state that persists across scene transitions
+ */
+interface WeeklyGameState {
+  weeklyCase: WeeklyCase | null;
+  weeklyProgress: WeeklyProgress | null;
+  chapterStatuses: ChapterStatus[];
+  currentDayNumber: number;
+  isAccusationUnlocked: boolean;
+  lastLoadTime: number;
+}
+
+/**
  * Singleton manager for game state that persists across scene transitions.
  * Prevents data from being reloaded unnecessarily and maintains dialogue history.
  */
@@ -29,6 +49,15 @@ class GameStateManagerClass {
     progress: null,
     dialogueStates: new Map(),
     currentSuspectIndex: 0,
+    lastLoadTime: 0,
+  };
+
+  private weeklyState: WeeklyGameState = {
+    weeklyCase: null,
+    weeklyProgress: null,
+    chapterStatuses: [],
+    currentDayNumber: 1,
+    isAccusationUnlocked: false,
     lastLoadTime: 0,
   };
 
@@ -195,6 +224,133 @@ class GameStateManagerClass {
    */
   setCurrentSuspectIndex(index: number): void {
     this.state.currentSuspectIndex = index;
+  }
+
+  // ============================================
+  // WEEKLY MODE METHODS
+  // ============================================
+
+  /**
+   * Check if weekly cache is still valid
+   */
+  private isWeeklyCacheValid(): boolean {
+    if (!this.weeklyState.weeklyCase || !this.weeklyState.weeklyProgress) {
+      return false;
+    }
+    return Date.now() - this.weeklyState.lastLoadTime < this.CACHE_DURATION;
+  }
+
+  /**
+   * Load weekly game data from API or return cached data
+   */
+  async loadWeeklyGameData(forceRefresh = false): Promise<{
+    weeklyCase: WeeklyCase;
+    weeklyProgress: WeeklyProgress;
+    chapterStatuses: ChapterStatus[];
+    currentDayNumber: number;
+    isAccusationUnlocked: boolean;
+  }> {
+    if (!forceRefresh && this.isWeeklyCacheValid()) {
+      return {
+        weeklyCase: this.weeklyState.weeklyCase!,
+        weeklyProgress: this.weeklyState.weeklyProgress!,
+        chapterStatuses: this.weeklyState.chapterStatuses,
+        currentDayNumber: this.weeklyState.currentDayNumber,
+        isAccusationUnlocked: this.weeklyState.isAccusationUnlocked,
+      };
+    }
+
+    try {
+      const response = await fetch('/api/weekly/init');
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const data = (await response.json()) as InitWeeklyGameResponse;
+
+      // Check if case changed (new week) - if so, reset dialogue states
+      if (this.weeklyState.weeklyCase && this.weeklyState.weeklyCase.id !== data.weeklyCase.id) {
+        this.state.dialogueStates.clear();
+      }
+
+      this.weeklyState.weeklyCase = data.weeklyCase;
+      this.weeklyState.weeklyProgress = data.progress;
+      this.weeklyState.chapterStatuses = data.chapterStatuses;
+      this.weeklyState.currentDayNumber = data.currentDayNumber;
+      this.weeklyState.isAccusationUnlocked = data.isAccusationUnlocked;
+      this.weeklyState.lastLoadTime = Date.now();
+
+      return {
+        weeklyCase: data.weeklyCase,
+        weeklyProgress: data.progress,
+        chapterStatuses: data.chapterStatuses,
+        currentDayNumber: data.currentDayNumber,
+        isAccusationUnlocked: data.isAccusationUnlocked,
+      };
+    } catch (error) {
+      console.error('Failed to load weekly game data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get current weekly case (returns null if not loaded)
+   */
+  getWeeklyCase(): WeeklyCase | null {
+    return this.weeklyState.weeklyCase;
+  }
+
+  /**
+   * Get weekly player progress (returns null if not loaded)
+   */
+  getWeeklyProgress(): WeeklyProgress | null {
+    return this.weeklyState.weeklyProgress;
+  }
+
+  /**
+   * Update weekly progress
+   */
+  updateWeeklyProgress(progress: WeeklyProgress): void {
+    this.weeklyState.weeklyProgress = progress;
+  }
+
+  /**
+   * Get chapter statuses
+   */
+  getChapterStatuses(): ChapterStatus[] {
+    return this.weeklyState.chapterStatuses;
+  }
+
+  /**
+   * Check if accusation is unlocked (Sunday)
+   */
+  isAccusationUnlocked(): boolean {
+    return this.weeklyState.isAccusationUnlocked;
+  }
+
+  /**
+   * Get current day number (1-7, Mon-Sun)
+   */
+  getCurrentDayNumber(): number {
+    return this.weeklyState.currentDayNumber;
+  }
+
+  /**
+   * Invalidate weekly cache
+   */
+  invalidateWeeklyCache(): void {
+    this.weeklyState.lastLoadTime = 0;
+  }
+
+  /**
+   * Reset all weekly state
+   */
+  resetWeeklyState(): void {
+    this.weeklyState = {
+      weeklyCase: null,
+      weeklyProgress: null,
+      chapterStatuses: [],
+      currentDayNumber: 1,
+      isAccusationUnlocked: false,
+      lastLoadTime: 0,
+    };
   }
 }
 

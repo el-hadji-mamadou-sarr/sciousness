@@ -15,6 +15,17 @@ import {
   AchievementId,
   ACHIEVEMENTS,
   Case,
+  // Weekly types
+  WeeklyCase,
+  WeeklyProgress,
+  ChapterStatus,
+  InitWeeklyGameResponse,
+  CompleteChapterRequest,
+  CompleteChapterResponse,
+  WeeklyFindClueResponse,
+  WeeklyAccuseResponse,
+  WeeklyProgressResponse,
+  WEEKLY_POINTS,
 } from '../shared/types/game';
 import { redis, reddit, createServer, context } from '@devvit/web/server';
 import { createPost } from './core/post';
@@ -743,6 +754,575 @@ router.get<object, { type: string; profile: DetectiveProfile } | { status: strin
       res.status(400).json({
         status: 'error',
         message: 'Failed to get profile',
+      });
+    }
+  }
+);
+
+// ============================================
+// WEEKLY CASE SYSTEM ENDPOINTS
+// ============================================
+
+// Import weekly case data (will be created later)
+// For now, we'll use a placeholder
+let getCurrentWeeklyCase: () => WeeklyCase | null;
+try {
+  // Dynamic import will be available when weekly-cases module exists
+  getCurrentWeeklyCase = () => null; // Placeholder until weekly cases are created
+} catch {
+  getCurrentWeeklyCase = () => null;
+}
+
+// Helper to get current week info
+function getCurrentWeekInfo(): { weekNumber: number; startDate: string; dayOfWeek: number } {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon...
+  const adjustedDay = dayOfWeek === 0 ? 7 : dayOfWeek; // Convert to 1=Mon, 7=Sun
+
+  // Calculate Monday of this week
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (adjustedDay - 1));
+
+  // Calculate week number
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const weekNumber = Math.ceil(((monday.getTime() - startOfYear.getTime()) / 86400000 + 1) / 7);
+
+  return {
+    weekNumber,
+    startDate: monday.toISOString().split('T')[0] || '',
+    dayOfWeek: adjustedDay,
+  };
+}
+
+// Helper to get unlocked chapters based on current day
+function getUnlockedChapters(): number[] {
+  const { dayOfWeek } = getCurrentWeekInfo();
+  const unlocked: number[] = [];
+  for (let i = 1; i <= dayOfWeek; i++) {
+    unlocked.push(i);
+  }
+  return unlocked;
+}
+
+// Helper to calculate chapter points
+function calculateChapterPoints(
+  consecutiveDays: number,
+  isOnTime: boolean
+): { basePoints: number; streakBonus: number; onTimeBonus: number } {
+  const basePoints = WEEKLY_POINTS.CHAPTER_COMPLETE;
+  const streakMultiplier = Math.min(consecutiveDays * WEEKLY_POINTS.STREAK_MULTIPLIER_PER_DAY, 0.5);
+  const streakBonus = Math.floor(basePoints * streakMultiplier);
+  const onTimeBonus = isOnTime ? WEEKLY_POINTS.ON_TIME_BONUS : 0;
+
+  return { basePoints, streakBonus, onTimeBonus };
+}
+
+// Helper to get weekly progress from Redis
+async function getWeeklyProgress(postId: string, caseId: string): Promise<WeeklyProgress> {
+  const userId = context.userId || 'anonymous';
+  const key = `weekly-progress:${postId}:${userId}`;
+  const data = await redis.get(key);
+
+  if (data) {
+    return JSON.parse(data) as WeeklyProgress;
+  }
+
+  // Default weekly progress
+  return {
+    caseId,
+    odayNumber: 1,
+    chaptersCompleted: [],
+    currentChapter: 1,
+    cluesFoundByChapter: {},
+    witnessesInterrogated: [],
+    suspectsRevealed: [],
+    solved: false,
+    correct: false,
+    dailyBonusEarned: {},
+    consecutiveDaysPlayed: 0,
+  };
+}
+
+// Helper to save weekly progress to Redis
+async function saveWeeklyProgress(postId: string, progress: WeeklyProgress): Promise<void> {
+  const userId = context.userId || 'anonymous';
+  const key = `weekly-progress:${postId}:${userId}`;
+  await redis.set(key, JSON.stringify(progress));
+}
+
+// Helper to build chapter statuses for UI
+function buildChapterStatuses(weeklyCase: WeeklyCase, progress: WeeklyProgress): ChapterStatus[] {
+  const unlockedChapters = getUnlockedChapters();
+
+  return weeklyCase.chapters.map((chapter) => {
+    const isUnlocked = unlockedChapters.includes(chapter.dayNumber);
+    const isCompleted = progress.chaptersCompleted.includes(chapter.dayNumber);
+
+    // Available if unlocked AND all previous chapters completed
+    const previousChaptersComplete = weeklyCase.chapters
+      .filter((c) => c.dayNumber < chapter.dayNumber)
+      .every((c) => progress.chaptersCompleted.includes(c.dayNumber));
+
+    const isAvailable = isUnlocked && previousChaptersComplete && !isCompleted;
+    const isCurrent = isAvailable && !isCompleted;
+
+    return {
+      dayNumber: chapter.dayNumber,
+      title: chapter.title,
+      isUnlocked,
+      isCompleted,
+      isAvailable,
+      isCurrent,
+    };
+  });
+}
+
+// Initialize weekly game
+router.get<object, InitWeeklyGameResponse | { status: string; message: string }>(
+  '/api/weekly/init',
+  async (_req, res): Promise<void> => {
+    const { postId } = context;
+
+    if (!postId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'postId is required',
+      });
+      return;
+    }
+
+    try {
+      const weeklyCase = getCurrentWeeklyCase();
+
+      if (!weeklyCase) {
+        res.status(404).json({
+          status: 'error',
+          message: 'No weekly case available',
+        });
+        return;
+      }
+
+      const progress = await getWeeklyProgress(postId, weeklyCase.id);
+      const chapterStatuses = buildChapterStatuses(weeklyCase, progress);
+      const { dayOfWeek } = getCurrentWeekInfo();
+
+      res.json({
+        type: 'init_weekly_game',
+        postId,
+        weeklyCase,
+        progress,
+        chapterStatuses,
+        currentDayNumber: dayOfWeek,
+        isAccusationUnlocked: dayOfWeek === 7,
+      });
+    } catch (error) {
+      console.error(`API Weekly Init Error:`, error);
+      res.status(400).json({
+        status: 'error',
+        message: 'Failed to initialize weekly game',
+      });
+    }
+  }
+);
+
+// Complete a chapter
+router.post<object, CompleteChapterResponse | { status: string; message: string }, CompleteChapterRequest>(
+  '/api/weekly/complete-chapter',
+  async (req, res): Promise<void> => {
+    const { postId } = context;
+
+    if (!postId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'postId is required',
+      });
+      return;
+    }
+
+    try {
+      const { chapterDay } = req.body;
+      const weeklyCase = getCurrentWeeklyCase();
+
+      if (!weeklyCase) {
+        res.status(404).json({
+          status: 'error',
+          message: 'No weekly case available',
+        });
+        return;
+      }
+
+      const chapter = weeklyCase.chapters.find((c) => c.dayNumber === chapterDay);
+      if (!chapter) {
+        res.status(404).json({
+          status: 'error',
+          message: 'Chapter not found',
+        });
+        return;
+      }
+
+      // Verify chapter is unlocked
+      const unlockedChapters = getUnlockedChapters();
+      if (!unlockedChapters.includes(chapterDay)) {
+        res.status(403).json({
+          status: 'error',
+          message: 'Chapter not yet unlocked',
+        });
+        return;
+      }
+
+      const progress = await getWeeklyProgress(postId, weeklyCase.id);
+
+      // Check if already completed
+      if (progress.chaptersCompleted.includes(chapterDay)) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Chapter already completed',
+        });
+        return;
+      }
+
+      // Verify previous chapters are completed
+      const previousChaptersComplete = weeklyCase.chapters
+        .filter((c) => c.dayNumber < chapterDay)
+        .every((c) => progress.chaptersCompleted.includes(c.dayNumber));
+
+      if (!previousChaptersComplete) {
+        res.status(403).json({
+          status: 'error',
+          message: 'Must complete previous chapters first',
+        });
+        return;
+      }
+
+      // Check if playing on time (same day as unlock)
+      const { dayOfWeek } = getCurrentWeekInfo();
+      const isOnTime = dayOfWeek === chapterDay;
+
+      // Update consecutive days
+      const today = getTodayDateString();
+      if (progress.lastPlayedDate) {
+        if (areConsecutiveDays(progress.lastPlayedDate, today)) {
+          progress.consecutiveDaysPlayed += 1;
+        } else if (progress.lastPlayedDate !== today) {
+          progress.consecutiveDaysPlayed = 1;
+        }
+      } else {
+        progress.consecutiveDaysPlayed = 1;
+      }
+      progress.lastPlayedDate = today;
+
+      // Calculate points
+      const { basePoints, streakBonus, onTimeBonus } = calculateChapterPoints(
+        progress.consecutiveDaysPlayed,
+        isOnTime
+      );
+      const totalPointsEarned = basePoints + streakBonus + onTimeBonus;
+
+      // Mark chapter complete
+      progress.chaptersCompleted.push(chapterDay);
+      progress.currentChapter = Math.min(chapterDay + 1, 7);
+      progress.dailyBonusEarned[chapterDay] = isOnTime;
+
+      // Add revealed suspects from this chapter
+      if (chapter.suspectsRevealed) {
+        for (const suspectId of chapter.suspectsRevealed) {
+          if (!progress.suspectsRevealed.includes(suspectId)) {
+            progress.suspectsRevealed.push(suspectId);
+          }
+        }
+      }
+
+      await saveWeeklyProgress(postId, progress);
+
+      // Award points to detective profile
+      const profile = await getDetectiveProfile();
+      profile.points += totalPointsEarned;
+      await saveDetectiveProfile(profile);
+
+      // Track stats
+      await redis.incrBy(`weekly-stats:${postId}:chapter:${chapterDay}:completed`, 1);
+
+      // Check if next chapter is unlocked
+      const nextChapterUnlocked = unlockedChapters.includes(chapterDay + 1);
+
+      res.json({
+        type: 'complete_chapter',
+        postId,
+        progress,
+        pointsEarned: totalPointsEarned,
+        streakBonus,
+        onTimeBonus,
+        nextChapterUnlocked,
+      });
+    } catch (error) {
+      console.error(`API Weekly Complete Chapter Error:`, error);
+      res.status(400).json({
+        status: 'error',
+        message: 'Failed to complete chapter',
+      });
+    }
+  }
+);
+
+// Find a clue in weekly mode
+router.post<object, WeeklyFindClueResponse | { status: string; message: string }, { clueId: string; chapterDay: number }>(
+  '/api/weekly/find-clue',
+  async (req, res): Promise<void> => {
+    const { postId } = context;
+
+    if (!postId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'postId is required',
+      });
+      return;
+    }
+
+    try {
+      const { clueId, chapterDay } = req.body;
+      const weeklyCase = getCurrentWeeklyCase();
+
+      if (!weeklyCase) {
+        res.status(404).json({
+          status: 'error',
+          message: 'No weekly case available',
+        });
+        return;
+      }
+
+      const clue = weeklyCase.allClues.find((c) => c.id === clueId);
+      if (!clue) {
+        res.status(404).json({
+          status: 'error',
+          message: 'Clue not found',
+        });
+        return;
+      }
+
+      const progress = await getWeeklyProgress(postId, weeklyCase.id);
+
+      // Initialize chapter clues array if needed
+      if (!progress.cluesFoundByChapter[chapterDay]) {
+        progress.cluesFoundByChapter[chapterDay] = [];
+      }
+
+      // Add clue if not already found
+      if (!progress.cluesFoundByChapter[chapterDay].includes(clueId)) {
+        progress.cluesFoundByChapter[chapterDay].push(clueId);
+        await saveWeeklyProgress(postId, progress);
+      }
+
+      res.json({
+        type: 'weekly_find_clue',
+        postId,
+        clue: { ...clue, found: true },
+        progress,
+        chapterDay,
+      });
+    } catch (error) {
+      console.error(`API Weekly Find Clue Error:`, error);
+      res.status(400).json({
+        status: 'error',
+        message: 'Failed to find clue',
+      });
+    }
+  }
+);
+
+// Weekly accusation (only on Day 7)
+router.post<object, WeeklyAccuseResponse | { status: string; message: string }, AccuseRequest>(
+  '/api/weekly/accuse',
+  async (req, res): Promise<void> => {
+    const { postId } = context;
+
+    if (!postId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'postId is required',
+      });
+      return;
+    }
+
+    try {
+      const { dayOfWeek } = getCurrentWeekInfo();
+
+      // Verify it's Sunday (Day 7)
+      if (dayOfWeek !== 7) {
+        res.status(403).json({
+          status: 'error',
+          message: 'Accusations are only allowed on Sunday',
+        });
+        return;
+      }
+
+      const { suspectId } = req.body;
+      const weeklyCase = getCurrentWeeklyCase();
+
+      if (!weeklyCase) {
+        res.status(404).json({
+          status: 'error',
+          message: 'No weekly case available',
+        });
+        return;
+      }
+
+      const suspect = weeklyCase.suspects.find((s) => s.id === suspectId);
+      if (!suspect) {
+        res.status(404).json({
+          status: 'error',
+          message: 'Suspect not found',
+        });
+        return;
+      }
+
+      const progress = await getWeeklyProgress(postId, weeklyCase.id);
+
+      // Check if already made accusation
+      if (progress.solved) {
+        res.status(400).json({
+          status: 'error',
+          message: 'You have already made an accusation this week',
+        });
+        return;
+      }
+
+      // Update progress
+      progress.accusedSuspect = suspectId;
+      progress.solved = true;
+      progress.correct = suspect.id === weeklyCase.guiltySubjectId;
+
+      await saveWeeklyProgress(postId, progress);
+
+      // Calculate points
+      let pointsEarned = 0;
+      let weeklyBonus = 0;
+      let chaptersPlayedBonus = 0;
+
+      if (progress.correct) {
+        pointsEarned = WEEKLY_POINTS.CORRECT_ACCUSATION;
+
+        // Full week bonus (completed all 7 chapters)
+        if (progress.chaptersCompleted.length === 7) {
+          weeklyBonus = WEEKLY_POINTS.FULL_WEEK_BONUS;
+        }
+
+        // Chapters played bonus (partial participation)
+        chaptersPlayedBonus = progress.chaptersCompleted.length * 5;
+
+        // All clues bonus
+        const totalCluesFound = Object.values(progress.cluesFoundByChapter).flat().length;
+        if (totalCluesFound >= weeklyCase.allClues.length) {
+          pointsEarned += WEEKLY_POINTS.ALL_CLUES_BONUS;
+        }
+      }
+
+      const totalPoints = pointsEarned + weeklyBonus + chaptersPlayedBonus;
+
+      // Update detective profile
+      const profile = await getDetectiveProfile();
+      profile.points += totalPoints;
+
+      if (progress.correct && !profile.solvedCases.includes(weeklyCase.id)) {
+        profile.solvedCases.push(weeklyCase.id);
+      }
+
+      // Check achievements
+      let newAchievements: AchievementId[] = [];
+      if (progress.correct) {
+        // Convert WeeklyCase to Case-like structure for achievement checking
+        const caseForAchievements: Case = {
+          id: weeklyCase.id,
+          title: weeklyCase.title,
+          dayNumber: 7,
+          intro: weeklyCase.overallIntro,
+          victimName: weeklyCase.victimName,
+          victimDescription: weeklyCase.victimDescription,
+          location: weeklyCase.location,
+          crimeSceneObjects: [],
+          suspects: weeklyCase.suspects,
+          clues: weeklyCase.allClues,
+        };
+
+        const allCluesFound = Object.values(progress.cluesFoundByChapter).flat();
+        newAchievements = await checkAndAwardAchievements(
+          profile,
+          caseForAchievements,
+          postId,
+          allCluesFound,
+          true
+        );
+      }
+
+      await saveDetectiveProfile(profile);
+
+      // Track stats
+      await redis.incrBy(`weekly-stats:${postId}:accusations:${suspectId}`, 1);
+      await redis.incrBy(`weekly-stats:${postId}:total-accusations`, 1);
+      if (progress.correct) {
+        await redis.incrBy(`weekly-stats:${postId}:correct-accusations`, 1);
+      }
+
+      res.json({
+        type: 'weekly_accuse',
+        postId,
+        correct: progress.correct,
+        suspect,
+        progress,
+        pointsEarned,
+        weeklyBonus,
+        chaptersPlayedBonus,
+        totalPoints: profile.points,
+        newAchievements: newAchievements.length > 0 ? newAchievements : undefined,
+      });
+    } catch (error) {
+      console.error(`API Weekly Accuse Error:`, error);
+      res.status(400).json({
+        status: 'error',
+        message: 'Failed to make accusation',
+      });
+    }
+  }
+);
+
+// Get weekly progress
+router.get<object, WeeklyProgressResponse | { status: string; message: string }>(
+  '/api/weekly/progress',
+  async (_req, res): Promise<void> => {
+    const { postId } = context;
+
+    if (!postId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'postId is required',
+      });
+      return;
+    }
+
+    try {
+      const weeklyCase = getCurrentWeeklyCase();
+
+      if (!weeklyCase) {
+        res.status(404).json({
+          status: 'error',
+          message: 'No weekly case available',
+        });
+        return;
+      }
+
+      const progress = await getWeeklyProgress(postId, weeklyCase.id);
+      const chapterStatuses = buildChapterStatuses(weeklyCase, progress);
+
+      res.json({
+        type: 'weekly_progress',
+        postId,
+        progress,
+        chapterStatuses,
+      });
+    } catch (error) {
+      console.error(`API Weekly Progress Error:`, error);
+      res.status(400).json({
+        status: 'error',
+        message: 'Failed to get weekly progress',
       });
     }
   }

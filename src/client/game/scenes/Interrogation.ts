@@ -5,6 +5,9 @@ import {
   DialogueOption,
   PlayerProgress,
   FindClueResponse,
+  WeeklyCase,
+  WeeklyProgress,
+  Witness,
 } from '../../../shared/types/game';
 import { case1 } from './crime-scenes/case1';
 import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
@@ -12,6 +15,17 @@ import { transitionToScene } from '../utils/SceneTransition';
 import { createNoirText, createNoirButton, isMobileScreen, getScaleFactor } from '../utils/NoirText';
 import { GameStateManager } from '../utils/GameStateManager';
 import { QuickNotes } from '../utils/QuickNotes';
+
+// Interviewee can be either a Suspect or Witness
+type Interviewee = Suspect | Witness;
+
+// Weekly mode scene data interface
+interface WeeklyInterrogationData {
+  weeklyMode?: boolean;
+  weeklyCase?: WeeklyCase;
+  progress?: WeeklyProgress;
+  currentChapter?: number;
+}
 
 export class Interrogation extends Scene {
   private currentCase: Case | null = null;
@@ -23,12 +37,36 @@ export class Interrogation extends Scene {
   private currentDialogueOptions: DialogueOption[] = [];
   private quickNotes: QuickNotes | null = null;
 
+  // Weekly mode properties
+  private weeklyMode: boolean = false;
+  private weeklyCase: WeeklyCase | null = null;
+  private weeklyProgress: WeeklyProgress | null = null;
+  private currentChapter: number = 1;
+  private interviewees: Interviewee[] = [];
+
   constructor() {
     super('Interrogation');
   }
 
   private isMobile(): boolean {
     return isMobileScreen(this);
+  }
+
+  init(data?: WeeklyInterrogationData): void {
+    // Reset weekly mode properties
+    this.weeklyMode = false;
+    this.weeklyCase = null;
+    this.weeklyProgress = null;
+    this.currentChapter = 1;
+    this.interviewees = [];
+
+    // Check if we're in weekly mode
+    if (data?.weeklyMode && data.weeklyCase) {
+      this.weeklyMode = true;
+      this.weeklyCase = data.weeklyCase;
+      this.weeklyProgress = data.progress || null;
+      this.currentChapter = data.currentChapter || 1;
+    }
   }
 
   async create() {
@@ -71,6 +109,15 @@ export class Interrogation extends Scene {
   }
 
   private async loadGameData(): Promise<void> {
+    // If in weekly mode, build interviewees from weekly data
+    if (this.weeklyMode && this.weeklyCase) {
+      this.buildIntervieweesFromWeeklyData();
+      this.currentCase = this.buildCaseFromWeeklyData();
+      this.progress = this.buildProgressFromWeeklyData();
+      return;
+    }
+
+    // Standard daily mode
     try {
       const data = await GameStateManager.loadGameData();
       this.currentCase = data.currentCase;
@@ -84,6 +131,95 @@ export class Interrogation extends Scene {
   private createFallbackCase(): void {
     this.currentCase = { ...case1 };
     this.progress = { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
+  }
+
+  // Build list of available interviewees (suspects + witnesses) for current chapter
+  private buildIntervieweesFromWeeklyData(): void {
+    if (!this.weeklyCase || !this.weeklyProgress) {
+      this.interviewees = [];
+      return;
+    }
+
+    // Get revealed suspects
+    const revealedSuspects = this.weeklyCase.suspects.filter(s =>
+      this.weeklyProgress!.suspectsRevealed.includes(s.id)
+    );
+
+    // Get available witnesses from chapters up to current
+    const availableWitnesses: Witness[] = [];
+    for (const chapter of this.weeklyCase.chapters) {
+      if (chapter.dayNumber <= this.currentChapter) {
+        availableWitnesses.push(...chapter.witnesses);
+      }
+    }
+
+    // Combine suspects and witnesses
+    this.interviewees = [...revealedSuspects, ...availableWitnesses];
+  }
+
+  // Build a Case object from WeeklyCase data
+  private buildCaseFromWeeklyData(): Case {
+    if (!this.weeklyCase) {
+      return { ...case1 };
+    }
+
+    // Convert interviewees to suspects format for compatibility
+    const suspectsFromInterviewees: Suspect[] = this.interviewees.map(i => {
+      // Check if it's a Witness (has availableOnDay) or Suspect (has isGuilty)
+      if ('isGuilty' in i) {
+        return i as Suspect;
+      }
+      // Convert Witness to Suspect-like structure
+      const witness = i as Witness;
+      const suspect: Suspect = {
+        id: witness.id,
+        name: witness.name,
+        description: witness.description,
+        alibi: 'N/A - Witness',
+        isGuilty: false,
+        dialogueOptions: witness.dialogueOptions,
+      };
+      if (witness.portrait) {
+        suspect.portrait = witness.portrait;
+      }
+      return suspect;
+    });
+
+    return {
+      id: this.weeklyCase.id,
+      title: this.weeklyCase.title,
+      dayNumber: this.currentChapter,
+      intro: this.weeklyCase.overallIntro,
+      victimName: this.weeklyCase.victimName,
+      victimDescription: this.weeklyCase.victimDescription,
+      location: this.weeklyCase.location,
+      crimeSceneObjects: [],
+      suspects: suspectsFromInterviewees,
+      clues: this.weeklyCase.allClues,
+    };
+  }
+
+  // Build PlayerProgress from WeeklyProgress
+  private buildProgressFromWeeklyData(): PlayerProgress {
+    if (!this.weeklyProgress) {
+      return { odayNumber: 1, cluesFound: [], suspectsInterrogated: [], solved: false, correct: false };
+    }
+
+    const allFoundClues = Object.values(this.weeklyProgress.cluesFoundByChapter).flat();
+
+    const progress: PlayerProgress = {
+      odayNumber: this.currentChapter,
+      cluesFound: allFoundClues,
+      suspectsInterrogated: this.weeklyProgress.witnessesInterrogated,
+      solved: this.weeklyProgress.solved,
+      correct: this.weeklyProgress.correct,
+    };
+
+    if (this.weeklyProgress.accusedSuspect) {
+      progress.accusedSuspect = this.weeklyProgress.accusedSuspect;
+    }
+
+    return progress;
   }
 
   private createSuspectPanel(width: number, _height: number): void {
@@ -360,6 +496,22 @@ export class Interrogation extends Scene {
   private async findClue(clueId: string): Promise<void> {
     if (this.progress?.cluesFound.includes(clueId)) return;
     try {
+      // Use different API for weekly mode
+      if (this.weeklyMode) {
+        const response = await fetch('/api/weekly/find-clue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clueId, chapterDay: this.currentChapter }),
+        });
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        const data = await response.json();
+        this.weeklyProgress = data.progress;
+        this.progress = this.buildProgressFromWeeklyData();
+        this.showClueNotification(data.clue.name);
+        return;
+      }
+
+      // Standard daily mode
       const response = await fetch('/api/game/find-clue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -375,7 +527,9 @@ export class Interrogation extends Scene {
       console.error('Failed to find clue:', error);
       if (this.progress) {
         this.progress.cluesFound.push(clueId);
-        GameStateManager.updateProgress(this.progress);
+        if (!this.weeklyMode) {
+          GameStateManager.updateProgress(this.progress);
+        }
       }
     }
   }
@@ -421,15 +575,15 @@ export class Interrogation extends Scene {
       size: 'small',
       color: 'gray',
       hoverColor: 'white',
-      onClick: () => transitionToScene(this, 'CrimeScene'),
+      onClick: () => this.goToCrimeScene(),
       padding: { x: mobile ? 8 : 12, y: 8 },
     });
 
-    createNoirButton(this, btnX2, btnY, '[NOTES]', {
+    createNoirButton(this, btnX2, btnY, this.weeklyMode ? '[BACK]' : '[NOTES]', {
       size: 'small',
       color: 'gold',
       hoverColor: 'white',
-      onClick: () => this.quickNotes?.open(),
+      onClick: () => this.weeklyMode ? this.goBack() : this.quickNotes?.open(),
       padding: { x: mobile ? 8 : 12, y: 8 },
     });
 
@@ -437,8 +591,45 @@ export class Interrogation extends Scene {
       size: 'small',
       color: 'red',
       hoverColor: 'gold',
-      onClick: () => transitionToScene(this, 'Accusation'),
+      onClick: () => this.goToAccusation(),
       padding: { x: mobile ? 8 : 12, y: 8 },
     });
+  }
+
+  private goToCrimeScene(): void {
+    if (this.weeklyMode) {
+      transitionToScene(this, 'CrimeScene', {
+        weeklyMode: true,
+        weeklyCase: this.weeklyCase,
+        progress: this.weeklyProgress,
+        currentChapter: this.currentChapter,
+      });
+    } else {
+      transitionToScene(this, 'CrimeScene');
+    }
+  }
+
+  private goToAccusation(): void {
+    if (this.weeklyMode) {
+      transitionToScene(this, 'Accusation', {
+        weeklyMode: true,
+        weeklyCase: this.weeklyCase,
+        progress: this.weeklyProgress,
+      });
+    } else {
+      transitionToScene(this, 'Accusation');
+    }
+  }
+
+  private goBack(): void {
+    if (this.weeklyMode) {
+      transitionToScene(this, 'ChapterScene', {
+        dayNumber: this.currentChapter,
+        weeklyCase: this.weeklyCase,
+        progress: this.weeklyProgress,
+      });
+    } else {
+      transitionToScene(this, 'MainMenu');
+    }
   }
 }

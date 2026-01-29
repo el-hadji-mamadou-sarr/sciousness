@@ -14,6 +14,13 @@ export class Accusation extends Scene {
   private suspectButtons: GameObjects.Container[] = [];
   private confirmPanel: GameObjects.Container | null = null;
   private quickNotes: QuickNotes | null = null;
+  private scrollContainer: GameObjects.Container | null = null;
+  private scrollY: number = 0;
+  private maxScroll: number = 0;
+  private isDragging: boolean = false;
+  private lastY: number = 0;
+  private dragStartY: number = 0;
+  private hasMoved: boolean = false;
 
   constructor() {
     super('Accusation');
@@ -89,21 +96,87 @@ export class Accusation extends Scene {
   private createSuspectSelection(width: number): void {
     if (!this.currentCase) return;
 
+    const { height } = this.scale;
     const mobile = this.isMobile();
     const suspects = this.currentCase.suspects;
-    const startY = mobile ? 65 : 90;
+    const headerHeight = mobile ? 70 : 90;
+    const navHeight = mobile ? 50 : 60;
     const cardHeight = mobile ? 120 : 145;
     const cardSpacing = mobile ? 8 : 12;
 
+    // Calculate scroll area dimensions
+    const scrollAreaTop = headerHeight;
+    const scrollAreaHeight = height - headerHeight - navHeight - 10;
+
+    // Create scroll container
+    this.scrollContainer = this.add.container(0, 0);
+
+    // Create suspect cards inside scroll container
     suspects.forEach((suspect, index) => {
-      const y = startY + index * (cardHeight + cardSpacing);
+      const y = scrollAreaTop + index * (cardHeight + cardSpacing);
       const container = this.createSuspectCard(suspect, width, y, cardHeight);
+      this.scrollContainer!.add(container);
       this.suspectButtons.push(container);
+    });
+
+    // Calculate max scroll (total content height - visible area)
+    const totalContentHeight = suspects.length * (cardHeight + cardSpacing) - cardSpacing;
+    this.maxScroll = Math.max(0, totalContentHeight - scrollAreaHeight);
+
+    // Create mask for scroll area
+    const maskShape = this.make.graphics({ x: 0, y: 0 });
+    maskShape.fillStyle(0xffffff);
+    maskShape.fillRect(0, scrollAreaTop, width, scrollAreaHeight);
+    const mask = maskShape.createGeometryMask();
+    this.scrollContainer.setMask(mask);
+
+    // Add scroll interaction
+    this.setupScrollInteraction(scrollAreaTop, scrollAreaHeight, width);
+  }
+
+  private setupScrollInteraction(scrollAreaTop: number, scrollAreaHeight: number, width: number): void {
+    // Drag scrolling - use scene-level input to track dragging
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // Only start drag if within scroll area
+      if (pointer.y >= scrollAreaTop && pointer.y <= scrollAreaTop + scrollAreaHeight) {
+        this.isDragging = true;
+        this.lastY = pointer.y;
+        this.dragStartY = pointer.y;
+        this.hasMoved = false;
+      }
+    });
+
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (this.isDragging && this.scrollContainer) {
+        const deltaY = pointer.y - this.lastY;
+        const totalMoved = Math.abs(pointer.y - this.dragStartY);
+
+        // Only scroll if moved more than threshold (to distinguish from tap)
+        if (totalMoved > 10) {
+          this.hasMoved = true;
+          this.scrollY = Phaser.Math.Clamp(this.scrollY - deltaY, 0, this.maxScroll);
+          this.scrollContainer.y = -this.scrollY;
+        }
+        this.lastY = pointer.y;
+      }
+    });
+
+    this.input.on('pointerup', () => {
+      this.isDragging = false;
+    });
+
+    // Mouse wheel scrolling
+    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: GameObjects.GameObject[], _deltaX: number, deltaY: number) => {
+      if (this.scrollContainer) {
+        this.scrollY = Phaser.Math.Clamp(this.scrollY + deltaY * 0.5, 0, this.maxScroll);
+        this.scrollContainer.y = -this.scrollY;
+      }
     });
   }
 
   private createSuspectCard(suspect: Suspect, width: number, y: number, cardHeight: number): GameObjects.Container {
     const mobile = this.isMobile();
+    // Create container - will be added to scrollContainer, so use scene.add
     const container = this.add.container(width / 2, y);
     const cardWidth = width - (mobile ? 20 : 60);
 
@@ -156,7 +229,12 @@ export class Accusation extends Scene {
       bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
     });
 
-    container.on('pointerdown', () => this.showConfirmation(suspect));
+    container.on('pointerup', () => {
+      // Only trigger if we didn't scroll (tap vs drag)
+      if (!this.hasMoved) {
+        this.showConfirmation(suspect);
+      }
+    });
 
     return container;
   }
@@ -181,6 +259,12 @@ export class Accusation extends Scene {
     const dimBg = this.add.graphics();
     dimBg.fillStyle(0x000000, 0.7);
     dimBg.fillRect(-width / 2, -height / 2, width, height);
+    // Make dim background interactive to block clicks on elements behind
+    dimBg.setInteractive(new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height), Phaser.Geom.Rectangle.Contains);
+    dimBg.on('pointerdown', () => {
+      // Clicking outside the panel closes it
+      this.hideConfirmation();
+    });
     this.confirmPanel.add(dimBg);
 
     const bg = this.add.graphics();
@@ -188,6 +272,8 @@ export class Accusation extends Scene {
     bg.fillRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 8);
     bg.lineStyle(3, 0xff4444, 1);
     bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 8);
+    // Make panel background interactive to prevent clicks from reaching dim background
+    bg.setInteractive(new Phaser.Geom.Rectangle(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight), Phaser.Geom.Rectangle.Contains);
     this.confirmPanel.add(bg);
 
     this.confirmPanel.add(createNoirText(this, 0, -panelHeight / 2 + 25, 'CONFIRM ACCUSATION', {
@@ -292,12 +378,23 @@ export class Accusation extends Scene {
     navBg.lineStyle(1, 0x333333, 0.8);
     navBg.lineBetween(0, height - navHeight, width, height - navHeight);
 
-    // Single back button centered
-    createNoirButton(this, width / 2, btnY, '[BACK]', {
+    // Distribute 2 buttons evenly: at 1/4 and 3/4 of width
+    const btnX1 = width / 4;
+    const btnX2 = (width * 3) / 4;
+
+    createNoirButton(this, btnX1, btnY, '[BACK]', {
       size: 'small',
       color: 'gray',
       hoverColor: 'white',
       onClick: () => transitionToScene(this, 'CrimeScene'),
+      padding: { x: mobile ? 8 : 12, y: 8 },
+    });
+
+    createNoirButton(this, btnX2, btnY, '[NOTES]', {
+      size: 'small',
+      color: 'gold',
+      hoverColor: 'white',
+      onClick: () => this.quickNotes?.open(),
       padding: { x: mobile ? 8 : 12, y: 8 },
     });
   }

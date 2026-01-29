@@ -650,9 +650,10 @@ export class CrimeScene extends Scene {
     navBg.lineStyle(1, 0x333333, 0.8);
     navBg.lineBetween(0, height - navHeight, width, height - navHeight);
 
-    // Distribute 2 buttons evenly: at 1/4 and 3/4 of width
-    const btnX1 = width / 4;
-    const btnX2 = (width * 3) / 4;
+    // Distribute 3 buttons evenly: at 1/6, 3/6 (center), and 5/6 of width
+    const btnX1 = width / 6;
+    const btnX2 = width / 2;
+    const btnX3 = (width * 5) / 6;
 
     createNoirButton(this, btnX1, btnY, mobile ? '[ASK]' : '[ INTERROGATE ]', {
       size: 'small',
@@ -662,7 +663,15 @@ export class CrimeScene extends Scene {
       padding: { x: mobile ? 8 : 12, y: 8 },
     });
 
-    createNoirButton(this, btnX2, btnY, mobile ? '[ACCUSE]' : '[ ACCUSE ]', {
+    createNoirButton(this, btnX2, btnY, '[NOTES]', {
+      size: 'small',
+      color: 'gold',
+      hoverColor: 'white',
+      onClick: () => this.quickNotes?.open(),
+      padding: { x: mobile ? 8 : 12, y: 8 },
+    });
+
+    createNoirButton(this, btnX3, btnY, mobile ? '[ACCUSE]' : '[ ACCUSE ]', {
       size: 'small',
       color: 'red',
       hoverColor: 'gold',

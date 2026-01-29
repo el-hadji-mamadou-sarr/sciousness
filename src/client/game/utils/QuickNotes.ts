@@ -9,7 +9,6 @@ interface NotesData {
 
 export class QuickNotes {
   private scene: Scene;
-  private container: GameObjects.Container | null = null;
   private panel: GameObjects.Container | null = null;
   private isOpen: boolean = false;
   private notesText: string = '';
@@ -20,7 +19,7 @@ export class QuickNotes {
     this.scene = scene;
     this.caseId = caseId;
     this.loadNotes();
-    this.create();
+    this.createPanel();
   }
 
   private isMobile(): boolean {
@@ -48,60 +47,6 @@ export class QuickNotes {
     } catch {
       // Ignore storage errors
     }
-  }
-
-  private create(): void {
-    const { width, height } = this.scene.scale;
-    const mobile = this.isMobile();
-
-    // Create floating button
-    this.container = this.scene.add.container(0, 0);
-    this.container.setDepth(150);
-
-    const btnX = width - (mobile ? 35 : 45);
-    const btnY = mobile ? 80 : 100;
-
-    // Button background
-    const btnBg = this.scene.add.graphics();
-    btnBg.fillStyle(0x1a1a2e, 0.95);
-    btnBg.fillCircle(btnX, btnY, mobile ? 22 : 28);
-    btnBg.lineStyle(2, 0xffd700, 0.8);
-    btnBg.strokeCircle(btnX, btnY, mobile ? 22 : 28);
-    this.container.add(btnBg);
-
-    // Button icon (pencil emoji or text)
-    const btnIcon = createNoirText(this.scene, btnX, btnY, 'N', {
-      size: 'medium',
-      color: 'gold',
-      origin: { x: 0.5, y: 0.5 },
-    });
-    this.container.add(btnIcon);
-
-    // Make button interactive
-    const hitArea = this.scene.add.circle(btnX, btnY, mobile ? 22 : 28, 0x000000, 0);
-    hitArea.setInteractive({ useHandCursor: true });
-    this.container.add(hitArea);
-
-    hitArea.on('pointerover', () => {
-      btnBg.clear();
-      btnBg.fillStyle(0x2a2a4e, 0.95);
-      btnBg.fillCircle(btnX, btnY, mobile ? 22 : 28);
-      btnBg.lineStyle(2, 0xffffff, 1);
-      btnBg.strokeCircle(btnX, btnY, mobile ? 22 : 28);
-    });
-
-    hitArea.on('pointerout', () => {
-      btnBg.clear();
-      btnBg.fillStyle(0x1a1a2e, 0.95);
-      btnBg.fillCircle(btnX, btnY, mobile ? 22 : 28);
-      btnBg.lineStyle(2, 0xffd700, 0.8);
-      btnBg.strokeCircle(btnX, btnY, mobile ? 22 : 28);
-    });
-
-    hitArea.on('pointerdown', () => this.toggle());
-
-    // Create panel (hidden initially)
-    this.createPanel();
   }
 
   private createPanel(): void {
@@ -218,26 +163,26 @@ export class QuickNotes {
     }
   }
 
-  private toggle(): void {
-    if (this.isOpen) {
-      this.close();
-    } else {
-      this.open();
-    }
-  }
-
-  private open(): void {
+  public open(): void {
     if (!this.panel) return;
     this.isOpen = true;
     this.panel.setVisible(true);
     this.createTextInput();
   }
 
-  private close(): void {
+  public close(): void {
     if (!this.panel) return;
     this.isOpen = false;
     this.panel.setVisible(false);
     this.removeTextInput();
+  }
+
+  public toggle(): void {
+    if (this.isOpen) {
+      this.close();
+    } else {
+      this.open();
+    }
   }
 
   private clearNotes(): void {
@@ -250,9 +195,6 @@ export class QuickNotes {
 
   public destroy(): void {
     this.removeTextInput();
-    if (this.container) {
-      this.container.destroy();
-    }
     if (this.panel) {
       this.panel.destroy();
     }

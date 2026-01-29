@@ -632,31 +632,43 @@ export class CrimeScene extends Scene {
 
   private createNavigationButtons(width: number, height: number): void {
     const mobile = this.isMobile();
-    const btnY = height - (mobile ? 18 : 22);
-    const spacing = mobile ? 58 : 130;
+    const navHeight = mobile ? 50 : 60;
+    const btnY = height - navHeight / 2;
 
-    createNoirButton(this, width / 2 - spacing, btnY, mobile ? '[ASK]' : '[ INTERROGATE ]', {
+    // Create bottom nav bar background
+    const navBg = this.add.graphics();
+    navBg.fillStyle(0x0a0a14, 0.95);
+    navBg.fillRect(0, height - navHeight, width, navHeight);
+    navBg.lineStyle(1, 0x333333, 0.8);
+    navBg.lineBetween(0, height - navHeight, width, height - navHeight);
+
+    // Distribute 3 buttons evenly: at 1/6, 3/6 (center), and 5/6 of width
+    const btnX1 = width / 6;
+    const btnX2 = width / 2;
+    const btnX3 = (width * 5) / 6;
+
+    createNoirButton(this, btnX1, btnY, mobile ? '[ASK]' : '[ INTERROGATE ]', {
       size: 'small',
       color: 'green',
       hoverColor: 'cyan',
       onClick: () => transitionToScene(this, 'Interrogation'),
-      padding: { x: mobile ? 6 : 10, y: 8 },
+      padding: { x: mobile ? 8 : 12, y: 8 },
     });
 
-    createNoirButton(this, width / 2, btnY, mobile ? '[NOTES]' : '[NOTEBOOK]', {
+    createNoirButton(this, btnX2, btnY, mobile ? '[NOTES]' : '[NOTEBOOK]', {
       size: 'small',
       color: 'gold',
       hoverColor: 'white',
       onClick: () => transitionToScene(this, 'Notebook', { returnTo: 'CrimeScene' }),
-      padding: { x: mobile ? 6 : 10, y: 8 },
+      padding: { x: mobile ? 8 : 12, y: 8 },
     });
 
-    createNoirButton(this, width / 2 + spacing, btnY, mobile ? '[ACCUSE]' : '[ ACCUSE ]', {
+    createNoirButton(this, btnX3, btnY, mobile ? '[ACCUSE]' : '[ ACCUSE ]', {
       size: 'small',
       color: 'red',
       hoverColor: 'gold',
       onClick: () => transitionToScene(this, 'Accusation'),
-      padding: { x: mobile ? 6 : 10, y: 8 },
+      padding: { x: mobile ? 8 : 12, y: 8 },
     });
   }
 

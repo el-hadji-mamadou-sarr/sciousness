@@ -516,15 +516,45 @@ export class Notebook extends Scene {
     });
   }
 
-  private createNavigationButtons(_width: number, height: number): void {
+  private createNavigationButtons(width: number, height: number): void {
     const mobile = this.isMobile();
+    const navHeight = mobile ? 50 : 60;
+    const btnY = height - navHeight / 2;
 
-    createNoirButton(this, mobile ? 50 : 70, height - (mobile ? 20 : 28), '[BACK]', {
+    // Create bottom nav bar background
+    const navBg = this.add.graphics();
+    navBg.fillStyle(0x0a0a14, 0.95);
+    navBg.fillRect(0, height - navHeight, width, navHeight);
+    navBg.lineStyle(1, 0x333333, 0.8);
+    navBg.lineBetween(0, height - navHeight, width, height - navHeight);
+
+    // Distribute 3 buttons evenly: at 1/6, 3/6 (center), and 5/6 of width
+    const btnX1 = width / 6;
+    const btnX2 = width / 2;
+    const btnX3 = (width * 5) / 6;
+
+    createNoirButton(this, btnX1, btnY, '[BACK]', {
       size: 'small',
       color: 'gray',
       hoverColor: 'white',
       onClick: () => transitionToScene(this, this.returnScene),
-      padding: { x: 12, y: 6 },
+      padding: { x: mobile ? 8 : 12, y: 8 },
+    });
+
+    createNoirButton(this, btnX2, btnY, '[ASK]', {
+      size: 'small',
+      color: 'green',
+      hoverColor: 'cyan',
+      onClick: () => transitionToScene(this, 'Interrogation'),
+      padding: { x: mobile ? 8 : 12, y: 8 },
+    });
+
+    createNoirButton(this, btnX3, btnY, '[ACCUSE]', {
+      size: 'small',
+      color: 'red',
+      hoverColor: 'gold',
+      onClick: () => transitionToScene(this, 'Accusation'),
+      padding: { x: mobile ? 8 : 12, y: 8 },
     });
   }
 }

@@ -131,6 +131,9 @@ export class Preloader extends Scene {
     //  Load the assets for the game
     this.load.setPath('../assets');
     this.load.image('logo', 'logo.png');
+
+    // Load background music
+    this.load.audio('bgmusic', ['audio/noir-ambience.mp3']);
   }
 
   create() {

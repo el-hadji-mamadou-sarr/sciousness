@@ -3,6 +3,7 @@ import { Case, PlayerProgress, InitGameResponse } from '../../../shared/types/ga
 import { context } from '@devvit/web/client';
 import { transitionToScene } from '../utils/SceneTransition';
 import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
+import { AudioManager } from '../utils/AudioManager';
 
 // Admin usernames that can play unlimited times for testing
 const ADMIN_USERNAMES = ['ashscars'];
@@ -47,6 +48,9 @@ export class MainMenu extends Scene {
     await this.loadGameData();
     this.refreshLayout();
     this.scale.on('resize', () => this.scene.restart());
+
+    // Start background music
+    AudioManager.playMusic(this, 'bgmusic');
   }
 
   private async loadGameData(): Promise<void> {

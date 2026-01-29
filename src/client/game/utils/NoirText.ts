@@ -154,10 +154,43 @@ export function createNoirButton(
 }
 
 /**
- * Check if device is mobile based on screen width
+ * Check if we're on a true mobile device (not just a small window).
+ * Uses user agent detection to distinguish mobile devices from desktop in small containers.
+ */
+function isTrueMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+/**
+ * Check if device is mobile based on screen width AND device type.
+ * A desktop browser in a small container should NOT be treated as mobile.
  */
 export function isMobileScreen(scene: Phaser.Scene): boolean {
-  return scene.scale.width < 768;
+  // Only treat as mobile if it's actually a mobile device
+  // Desktop in a small container (like Reddit embed) should use desktop layout
+  return isTrueMobileDevice() && scene.scale.width < 768;
+}
+
+/**
+ * Get scale factor for UI elements based on screen size.
+ * Scales UP on larger screens (no cap at 1.0) for better desktop experience.
+ * Reference resolution: 1920x1080 for desktop, 360x640 for mobile.
+ */
+export function getScaleFactor(scene: Phaser.Scene): number {
+  const { width, height } = scene.scale;
+  const mobile = isMobileScreen(scene);
+
+  if (mobile) {
+    // Mobile: scale based on 360x640 reference
+    return Math.min(width / 360, height / 640);
+  } else {
+    // Desktop: scale based on container size
+    // Use a smaller reference (1280x720) so UI is larger in smaller containers
+    const scale = Math.min(width / 1280, height / 720);
+    // Minimum scale of 0.5 for small containers, max 1.5 for 4K
+    return Math.max(0.5, Math.min(scale, 1.5));
+  }
 }
 
 /**

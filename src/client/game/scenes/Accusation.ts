@@ -3,7 +3,7 @@ import { Case, Suspect, PlayerProgress, AccuseResponse } from '../../../shared/t
 import { case1 } from './crime-scenes/case1';
 import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
 import { transitionToScene } from '../utils/SceneTransition';
-import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
+import { createNoirText, createNoirButton, isMobileScreen, getScaleFactor } from '../utils/NoirText';
 import { GameStateManager } from '../utils/GameStateManager';
 import { QuickNotes } from '../utils/QuickNotes';
 
@@ -99,11 +99,12 @@ export class Accusation extends Scene {
 
     const { height } = this.scale;
     const mobile = this.isMobile();
+    const scale = getScaleFactor(this);
     const suspects = this.currentCase.suspects;
-    const headerHeight = mobile ? 70 : 90;
-    const navHeight = mobile ? 50 : 60;
-    const cardHeight = mobile ? 120 : 145;
-    const cardSpacing = mobile ? 8 : 12;
+    const headerHeight = mobile ? 70 : Math.round(120 * scale);
+    const navHeight = mobile ? 50 : Math.round(80 * scale);
+    const cardHeight = mobile ? 120 : Math.round(200 * scale);
+    const cardSpacing = mobile ? 8 : Math.round(18 * scale);
 
     // Calculate scroll area dimensions
     const scrollAreaTop = headerHeight;
@@ -177,9 +178,10 @@ export class Accusation extends Scene {
 
   private createSuspectCard(suspect: Suspect, width: number, y: number, cardHeight: number): GameObjects.Container {
     const mobile = this.isMobile();
+    const scale = getScaleFactor(this);
     // Create container - will be added to scrollContainer, so use scene.add
     const container = this.add.container(width / 2, y);
-    const cardWidth = width - (mobile ? 20 : 60);
+    const cardWidth = mobile ? width - 20 : Math.min(width - Math.round(100 * scale), Math.round(900 * scale));
 
     const bg = this.add.graphics();
     bg.fillStyle(0x16213e, 0.9);
@@ -188,7 +190,7 @@ export class Accusation extends Scene {
     bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
     container.add(bg);
 
-    const portraitSize = mobile ? 60 : 75;
+    const portraitSize = mobile ? 60 : Math.round(120 * scale);
     const portrait = this.add.graphics();
     const portraitX = -cardWidth / 2 + 12 + portraitSize / 2;
     const portraitY = 12 + portraitSize / 2;
@@ -256,8 +258,9 @@ export class Accusation extends Scene {
 
     const { width, height } = this.scale;
     const mobile = this.isMobile();
-    const panelWidth = mobile ? width - 40 : 320;
-    const panelHeight = mobile ? 170 : 190;
+    const scale = getScaleFactor(this);
+    const panelWidth = mobile ? width - 40 : Math.round(450 * scale);
+    const panelHeight = mobile ? 170 : Math.round(260 * scale);
 
     const dimBg = this.add.graphics();
     dimBg.fillStyle(0x000000, 0.7);
@@ -374,7 +377,8 @@ export class Accusation extends Scene {
 
   private createNavigationButtons(width: number, height: number): void {
     const mobile = this.isMobile();
-    const navHeight = mobile ? 50 : 60;
+    const scale = getScaleFactor(this);
+    const navHeight = mobile ? 50 : Math.round(80 * scale);
     const btnY = height - navHeight / 2;
 
     // Create bottom nav bar background
@@ -401,7 +405,7 @@ export class Accusation extends Scene {
       size: 'small',
       color: 'cyan',
       hoverColor: 'white',
-      onClick: () => transitionToScene(this, 'Notebook', { returnScene: 'Accusation' }),
+      onClick: () => transitionToScene(this, 'Evidence', { returnTo: 'Accusation' }),
       padding: { x: mobile ? 8 : 12, y: 8 },
     });
 

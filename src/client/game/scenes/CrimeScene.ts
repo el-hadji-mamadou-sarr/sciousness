@@ -8,7 +8,7 @@ import {
 import { case1 } from './crime-scenes/case1';
 import { drawCrimeSceneObject } from '../utils/ProceduralGraphics';
 import { transitionToScene } from '../utils/SceneTransition';
-import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
+import { createNoirText, createNoirButton, isMobileScreen, getScaleFactor } from '../utils/NoirText';
 import { GameStateManager } from '../utils/GameStateManager';
 import { QuickNotes } from '../utils/QuickNotes';
 
@@ -94,8 +94,9 @@ export class CrimeScene extends Scene {
     if (!this.currentCase) return;
 
     const mobile = this.isMobile();
-    const headerHeight = mobile ? 45 : 60;
-    const footerHeight = mobile ? 140 : 170;
+    const scale = getScaleFactor(this);
+    const headerHeight = mobile ? 45 : Math.round(80 * scale);
+    const footerHeight = mobile ? 140 : Math.round(200 * scale);
     const boardY = headerHeight;
     const visibleBoardHeight = height - headerHeight - footerHeight;
     const minBoardHeight = mobile ? 500 : visibleBoardHeight;
@@ -241,6 +242,7 @@ export class CrimeScene extends Scene {
 
   private createBoardItem(item: BoardItem, boardWidth: number, boardHeight: number): void {
     const mobile = this.isMobile();
+    const scale = getScaleFactor(this);
     const x = (item.x / 100) * boardWidth;
     const y = (item.y / 100) * boardHeight;
 
@@ -251,14 +253,14 @@ export class CrimeScene extends Scene {
 
     let w: number, h: number;
     if (item.type === 'photo') {
-      w = mobile ? 55 : 70;
-      h = mobile ? 65 : 85;
+      w = mobile ? 55 : Math.round(120 * scale);
+      h = mobile ? 65 : Math.round(150 * scale);
     } else if (item.type === 'evidence') {
-      w = mobile ? 50 : 65;
-      h = mobile ? 40 : 50;
+      w = mobile ? 50 : Math.round(110 * scale);
+      h = mobile ? 40 : Math.round(85 * scale);
     } else {
-      w = mobile ? 45 : 60;
-      h = mobile ? 35 : 45;
+      w = mobile ? 45 : Math.round(100 * scale);
+      h = mobile ? 35 : Math.round(75 * scale);
     }
 
     const bg = this.add.graphics();
@@ -444,8 +446,9 @@ export class CrimeScene extends Scene {
   }
 
   private createCaseFile(boardWidth: number, boardHeight: number, mobile: boolean): void {
-    const fileW = mobile ? 60 : 80;
-    const fileH = mobile ? 45 : 55;
+    const scale = getScaleFactor(this);
+    const fileW = mobile ? 60 : Math.round(130 * scale);
+    const fileH = mobile ? 45 : Math.round(90 * scale);
     const x = boardWidth - fileW / 2 - 10;
     const y = boardHeight - fileH / 2 - 10;
 
@@ -562,8 +565,9 @@ export class CrimeScene extends Scene {
 
   private createInfoPanel(width: number, height: number): void {
     const mobile = this.isMobile();
-    const panelHeight = mobile ? 85 : 105;
-    const panelY = height - (mobile ? 135 : 165);
+    const scale = getScaleFactor(this);
+    const panelHeight = mobile ? 85 : Math.round(140 * scale);
+    const panelY = height - (mobile ? 135 : Math.round(195 * scale));
 
     this.infoPanel = this.add.container(width / 2, panelY + panelHeight / 2);
 
@@ -586,7 +590,8 @@ export class CrimeScene extends Scene {
     if (!this.infoPanel) return;
     const { width } = this.scale;
     const mobile = this.isMobile();
-    const panelHeight = mobile ? 110 : 130;
+    const scale = getScaleFactor(this);
+    const panelHeight = mobile ? 110 : Math.round(160 * scale);
 
     this.infoPanel.removeAll(true);
 
@@ -612,10 +617,27 @@ export class CrimeScene extends Scene {
     }));
   }
 
+  private getBoardClueCount(): { total: number; found: number } {
+    if (!this.currentCase) return { total: 0, found: 0 };
+
+    // Get clue IDs that are findable on the crime board (linked to crime scene objects)
+    const boardClueIds = new Set(
+      this.currentCase.crimeSceneObjects
+        .filter(obj => obj.clueId)
+        .map(obj => obj.clueId!)
+    );
+
+    const total = boardClueIds.size;
+    const found = this.progress?.cluesFound.filter(id => boardClueIds.has(id)).length || 0;
+
+    return { total, found };
+  }
+
   private createCluePanel(width: number, _height: number): void {
     const mobile = this.isMobile();
-    const panelW = mobile ? 80 : 110;
-    const panelH = mobile ? 35 : 45;
+    const scale = getScaleFactor(this);
+    const panelW = mobile ? 80 : Math.round(150 * scale);
+    const panelH = mobile ? 35 : Math.round(60 * scale);
 
     this.cluePanel = this.add.container(width - panelW / 2 - 10, mobile ? 35 : 50);
 
@@ -633,9 +655,8 @@ export class CrimeScene extends Scene {
       scale: 0.6,
     }));
 
-    const totalClues = this.currentCase?.clues.length || 0;
-    const foundClues = this.progress?.cluesFound.length || 0;
-    this.foundCluesText = createNoirText(this, 0, mobile ? 7 : 8, `${foundClues}/${totalClues}`, {
+    const { total, found } = this.getBoardClueCount();
+    this.foundCluesText = createNoirText(this, 0, mobile ? 7 : 8, `${found}/${total}`, {
       size: 'small',
       color: 'white',
       origin: { x: 0.5, y: 0.5 },
@@ -645,14 +666,14 @@ export class CrimeScene extends Scene {
 
   private updateCluePanel(): void {
     if (!this.foundCluesText) return;
-    const totalClues = this.currentCase?.clues.length || 0;
-    const foundClues = this.progress?.cluesFound.length || 0;
-    this.foundCluesText.setText(`${foundClues}/${totalClues}`);
+    const { total, found } = this.getBoardClueCount();
+    this.foundCluesText.setText(`${found}/${total}`);
   }
 
   private createNavigationButtons(width: number, height: number): void {
     const mobile = this.isMobile();
-    const navHeight = mobile ? 50 : 60;
+    const scale = getScaleFactor(this);
+    const navHeight = mobile ? 50 : Math.round(80 * scale);
     const btnY = height - navHeight / 2;
 
     // Create bottom nav bar background

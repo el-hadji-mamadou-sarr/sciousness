@@ -2,7 +2,7 @@ import { Scene, GameObjects } from 'phaser';
 import { Case, PlayerProgress, InitGameResponse } from '../../../shared/types/game';
 import { context } from '@devvit/web/client';
 import { transitionToScene } from '../utils/SceneTransition';
-import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
+import { createNoirText, createNoirButton, isMobileScreen, getScaleFactor } from '../utils/NoirText';
 import { AudioManager } from '../utils/AudioManager';
 
 // Admin usernames that can play unlimited times for testing
@@ -98,6 +98,7 @@ export class MainMenu extends Scene {
   private refreshLayout(): void {
     const { width, height } = this.scale;
     const mobile = this.isMobile();
+    const scale = getScaleFactor(this);
     this.cameras.resize(width, height);
 
     const alreadyPlayed = this.hasAlreadyPlayed();
@@ -118,10 +119,10 @@ export class MainMenu extends Scene {
       this.noirBg.lineBetween(0, y, width, y);
     }
 
-    // Glow color based on status
+    // Glow color based on status - larger glow on desktop
     const glowColor = alreadyPlayed ? (wasCorrect ? 0x003300 : 0x330000) : 0x330000;
     this.noirBg.fillStyle(glowColor, 0.25);
-    this.noirBg.fillCircle(width / 2, height * 0.35, mobile ? 120 : 180);
+    this.noirBg.fillCircle(width / 2, height * 0.35, mobile ? 120 : Math.round(280 * scale));
 
     // Title
     if (!this.title) {
@@ -259,8 +260,9 @@ export class MainMenu extends Scene {
     this.statusBadge.clear();
     this.statusBadge.setVisible(true);
 
-    const badgeWidth = mobile ? width - 30 : 300;
-    const badgeHeight = mobile ? 90 : 100;
+    const scale = getScaleFactor(this);
+    const badgeWidth = mobile ? width - 30 : Math.round(450 * scale);
+    const badgeHeight = mobile ? 90 : Math.round(140 * scale);
     const badgeX = width / 2 - badgeWidth / 2;
     const badgeY = height * (mobile ? 0.42 : 0.44);
 

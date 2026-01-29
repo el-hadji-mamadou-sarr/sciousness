@@ -12,9 +12,6 @@ import { Evidence } from './scenes/Evidence';
 import { Notebook } from './scenes/Notebook';
 import { Profile } from './scenes/Profile';
 
-// Detect if we're on mobile
-const isMobile = window.innerWidth < 768;
-
 //  Find out more information about the Game Config at:
 //  https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
 const config: Phaser.Types.Core.GameConfig = {
@@ -27,10 +24,12 @@ const config: Phaser.Types.Core.GameConfig = {
   roundPixels: false,
   pixelArt: false,
   scale: {
-    mode: isMobile ? Phaser.Scale.FIT : Phaser.Scale.RESIZE,
+    // Always use RESIZE mode to fill the container dynamically
+    // Mobile detection is handled per-scene based on current canvas size
+    mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: isMobile ? 360 : '100%',
-    height: isMobile ? 640 : '100%',
+    width: '100%',
+    height: '100%',
   },
   scene: [Boot, Preloader, Loading, MainMenu, CrimeScene, Interrogation, Accusation, Evidence, Notebook, GameOver, Profile],
 };

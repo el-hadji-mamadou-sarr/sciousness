@@ -122,12 +122,16 @@ export class QuickNotes {
     const panelWidth = mobile ? width - 30 : 350;
     const panelHeight = mobile ? height - 120 : 400;
 
+    // Get the game canvas position for proper positioning
+    const canvas = this.scene.game.canvas;
+    const canvasRect = canvas.getBoundingClientRect();
+
     // Create HTML textarea for actual text input
     this.inputElement = document.createElement('textarea');
     this.inputElement.style.cssText = `
-      position: absolute;
-      left: 50%;
-      top: 50%;
+      position: fixed;
+      left: ${canvasRect.left + canvasRect.width / 2}px;
+      top: ${canvasRect.top + canvasRect.height / 2}px;
       transform: translate(-50%, -50%);
       width: ${panelWidth - 40}px;
       height: ${panelHeight - 130}px;
@@ -137,11 +141,13 @@ export class QuickNotes {
       border-radius: 4px;
       color: #e0e0e0;
       font-family: 'Courier New', monospace;
-      font-size: ${mobile ? '14px' : '13px'};
+      font-size: ${mobile ? '16px' : '13px'};
       padding: 10px;
       resize: none;
       outline: none;
       z-index: 1000;
+      -webkit-appearance: none;
+      -webkit-overflow-scrolling: touch;
     `;
     this.inputElement.placeholder = 'Type your notes here...\n\nExample:\n- Suspect A has no alibi\n- Found poison in coffee\n- Check the garden connection';
     this.inputElement.value = this.notesText;
@@ -153,17 +159,36 @@ export class QuickNotes {
       }
     });
 
+    // Prevent viewport zooming on mobile
+    this.inputElement.addEventListener('focus', () => {
+      if (mobile) {
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+      }
+    });
+
+    this.inputElement.addEventListener('blur', () => {
+      if (mobile) {
+        document.body.style.position = '';
+        document.body.style.width = '';
+      }
+    });
+
     document.body.appendChild(this.inputElement);
-    this.inputElement.focus();
+
+    // Don't auto-focus on mobile to prevent keyboard from immediately appearing
+    if (!mobile) {
+      this.inputElement.focus();
+    }
 
     // Create HTML close button for mobile - positioned above the textarea
     if (mobile) {
       this.htmlCloseButton = document.createElement('button');
       this.htmlCloseButton.textContent = '✕ CLOSE';
       this.htmlCloseButton.style.cssText = `
-        position: absolute;
-        left: 50%;
-        top: calc(50% - ${panelHeight / 2 - 25}px);
+        position: fixed;
+        left: ${canvasRect.left + canvasRect.width / 2}px;
+        top: ${canvasRect.top + canvasRect.height / 2 - panelHeight / 2 + 25}px;
         transform: translateX(-50%);
         background: rgba(40, 40, 60, 0.95);
         border: 1px solid #ffd700;
@@ -175,18 +200,34 @@ export class QuickNotes {
         cursor: pointer;
         z-index: 1001;
         touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
       `;
-      this.htmlCloseButton.addEventListener('click', () => this.close());
-      this.htmlCloseButton.addEventListener('touchend', (e) => {
+
+      // Use only touchstart to avoid double-firing
+      this.htmlCloseButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
+        e.stopPropagation();
+        this.close();
+      }, { passive: false });
+
+      // Fallback for non-touch devices
+      this.htmlCloseButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         this.close();
       });
+
       document.body.appendChild(this.htmlCloseButton);
     }
   }
 
   private removeTextInput(): void {
+    // Reset body styles first
+    document.body.style.position = '';
+    document.body.style.width = '';
+
     if (this.inputElement) {
+      this.inputElement.blur();
       this.inputElement.remove();
       this.inputElement = null;
     }
@@ -204,10 +245,10 @@ export class QuickNotes {
   }
 
   public close(): void {
-    if (!this.panel) return;
+    if (!this.panel || !this.isOpen) return;
     this.isOpen = false;
-    this.panel.setVisible(false);
     this.removeTextInput();
+    this.panel.setVisible(false);
   }
 
   public toggle(): void {

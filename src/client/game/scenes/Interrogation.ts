@@ -9,7 +9,7 @@ import {
 import { case1 } from './crime-scenes/case1';
 import { drawSuspectPortrait } from '../utils/ProceduralGraphics';
 import { transitionToScene } from '../utils/SceneTransition';
-import { createNoirText, createNoirButton, isMobileScreen } from '../utils/NoirText';
+import { createNoirText, createNoirButton, isMobileScreen, getScaleFactor } from '../utils/NoirText';
 import { GameStateManager } from '../utils/GameStateManager';
 import { QuickNotes } from '../utils/QuickNotes';
 
@@ -88,7 +88,8 @@ export class Interrogation extends Scene {
 
   private createSuspectPanel(width: number, _height: number): void {
     const mobile = this.isMobile();
-    this.suspectPanel = this.add.container(width / 2, mobile ? 115 : 130);
+    const scale = getScaleFactor(this);
+    this.suspectPanel = this.add.container(width / 2, mobile ? 115 : Math.round(180 * scale));
   }
 
   private showSuspect(index: number): void {
@@ -108,8 +109,9 @@ export class Interrogation extends Scene {
 
     const { width } = this.scale;
     const mobile = this.isMobile();
-    const panelWidth = width - (mobile ? 16 : 60);
-    const panelHeight = mobile ? 220 : 210;
+    const scale = getScaleFactor(this);
+    const panelWidth = mobile ? width - 16 : Math.min(width - Math.round(100 * scale), Math.round(900 * scale));
+    const panelHeight = mobile ? 220 : Math.round(300 * scale);
 
     const bg = this.add.graphics();
     bg.fillStyle(0x1a1a2e, 0.95);
@@ -118,7 +120,7 @@ export class Interrogation extends Scene {
     bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 6);
     this.suspectPanel.add(bg);
 
-    const portraitSize = mobile ? 55 : 70;
+    const portraitSize = mobile ? 55 : Math.round(110 * scale);
     const portrait = this.add.graphics();
     const portraitX = -panelWidth / 2 + 15 + portraitSize / 2;
     const portraitY = -panelHeight / 2 + 15 + portraitSize / 2;
@@ -206,7 +208,8 @@ export class Interrogation extends Scene {
 
   private createDialoguePanel(width: number, height: number): void {
     const mobile = this.isMobile();
-    this.dialogueContainer = this.add.container(width / 2, mobile ? height / 2 + 115 : height / 2 + 110);
+    const scale = getScaleFactor(this);
+    this.dialogueContainer = this.add.container(width / 2, mobile ? height / 2 + 115 : height / 2 + Math.round(160 * scale));
   }
 
   private showDialogueOptions(): void {
@@ -214,8 +217,9 @@ export class Interrogation extends Scene {
 
     const { width, height } = this.scale;
     const mobile = this.isMobile();
-    const panelWidth = width - (mobile ? 16 : 60);
-    const panelHeight = height - (mobile ? 340 : 360);
+    const scale = getScaleFactor(this);
+    const panelWidth = mobile ? width - 16 : Math.min(width - Math.round(100 * scale), Math.round(900 * scale));
+    const panelHeight = height - (mobile ? 340 : Math.round(500 * scale));
 
     this.dialogueContainer.removeAll(true);
 
@@ -275,8 +279,9 @@ export class Interrogation extends Scene {
 
     const { width, height } = this.scale;
     const mobile = this.isMobile();
-    const panelWidth = width - (mobile ? 16 : 60);
-    const panelHeight = height - (mobile ? 340 : 360);
+    const scale = getScaleFactor(this);
+    const panelWidth = mobile ? width - 16 : Math.min(width - Math.round(100 * scale), Math.round(900 * scale));
+    const panelHeight = height - (mobile ? 340 : Math.round(500 * scale));
 
     this.dialogueContainer.removeAll(true);
 
@@ -396,7 +401,8 @@ export class Interrogation extends Scene {
 
   private createNavigationButtons(width: number, height: number): void {
     const mobile = this.isMobile();
-    const navHeight = mobile ? 50 : 60;
+    const scale = getScaleFactor(this);
+    const navHeight = mobile ? 50 : Math.round(80 * scale);
     const btnY = height - navHeight / 2;
 
     // Create bottom nav bar background

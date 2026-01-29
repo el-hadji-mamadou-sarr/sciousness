@@ -9,6 +9,7 @@ import { CrimeScene } from './scenes/CrimeScene';
 import { Interrogation } from './scenes/Interrogation';
 import { Accusation } from './scenes/Accusation';
 import { Evidence } from './scenes/Evidence';
+import { Notebook } from './scenes/Notebook';
 
 // Detect if we're on mobile
 const isMobile = window.innerWidth < 768;
@@ -30,7 +31,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: isMobile ? 360 : '100%',
     height: isMobile ? 640 : '100%',
   },
-  scene: [Boot, Preloader, Loading, MainMenu, CrimeScene, Interrogation, Accusation, Evidence, GameOver],
+  scene: [Boot, Preloader, Loading, MainMenu, CrimeScene, Interrogation, Accusation, Evidence, Notebook, GameOver],
 };
 
 const StartGame = (parent: string) => {

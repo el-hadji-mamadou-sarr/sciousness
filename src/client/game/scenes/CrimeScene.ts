@@ -633,21 +633,30 @@ export class CrimeScene extends Scene {
   private createNavigationButtons(width: number, height: number): void {
     const mobile = this.isMobile();
     const btnY = height - (mobile ? 18 : 22);
+    const spacing = mobile ? 58 : 130;
 
-    createNoirButton(this, width / 2 - (mobile ? 60 : 100), btnY, mobile ? '[INTERROGATE]' : '[ INTERROGATE ]', {
+    createNoirButton(this, width / 2 - spacing, btnY, mobile ? '[ASK]' : '[ INTERROGATE ]', {
       size: 'small',
       color: 'green',
       hoverColor: 'cyan',
       onClick: () => transitionToScene(this, 'Interrogation'),
-      padding: { x: 10, y: 8 },
+      padding: { x: mobile ? 6 : 10, y: 8 },
     });
 
-    createNoirButton(this, width / 2 + (mobile ? 60 : 100), btnY, mobile ? '[ACCUSE]' : '[ ACCUSE ]', {
+    createNoirButton(this, width / 2, btnY, mobile ? '[NOTES]' : '[NOTEBOOK]', {
+      size: 'small',
+      color: 'gold',
+      hoverColor: 'white',
+      onClick: () => transitionToScene(this, 'Notebook', { returnTo: 'CrimeScene' }),
+      padding: { x: mobile ? 6 : 10, y: 8 },
+    });
+
+    createNoirButton(this, width / 2 + spacing, btnY, mobile ? '[ACCUSE]' : '[ ACCUSE ]', {
       size: 'small',
       color: 'red',
       hoverColor: 'gold',
       onClick: () => transitionToScene(this, 'Accusation'),
-      padding: { x: 10, y: 8 },
+      padding: { x: mobile ? 6 : 10, y: 8 },
     });
   }
 

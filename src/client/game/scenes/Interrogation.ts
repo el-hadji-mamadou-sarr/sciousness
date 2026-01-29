@@ -390,21 +390,30 @@ export class Interrogation extends Scene {
   private createNavigationButtons(width: number, height: number): void {
     const mobile = this.isMobile();
     const btnY = height - (mobile ? 18 : 22);
+    const spacing = mobile ? 58 : 130;
 
-    createNoirButton(this, width / 2 - (mobile ? 70 : 110), btnY, '[SCENE]', {
+    createNoirButton(this, width / 2 - spacing, btnY, '[SCENE]', {
       size: 'small',
       color: 'gray',
       hoverColor: 'white',
       onClick: () => transitionToScene(this, 'CrimeScene'),
-      padding: { x: 12, y: 8 },
+      padding: { x: mobile ? 6 : 12, y: 8 },
     });
 
-    createNoirButton(this, width / 2 + (mobile ? 70 : 110), btnY, '[ACCUSE]', {
+    createNoirButton(this, width / 2, btnY, mobile ? '[NOTES]' : '[NOTEBOOK]', {
+      size: 'small',
+      color: 'gold',
+      hoverColor: 'white',
+      onClick: () => transitionToScene(this, 'Notebook', { returnTo: 'Interrogation' }),
+      padding: { x: mobile ? 6 : 10, y: 8 },
+    });
+
+    createNoirButton(this, width / 2 + spacing, btnY, '[ACCUSE]', {
       size: 'small',
       color: 'red',
       hoverColor: 'gold',
       onClick: () => transitionToScene(this, 'Accusation'),
-      padding: { x: 12, y: 8 },
+      padding: { x: mobile ? 6 : 12, y: 8 },
     });
   }
 }

@@ -29,6 +29,8 @@ function getLoadingMessage(targetScene: string): string {
       return 'Preparing interrogation';
     case 'Accusation':
       return 'Reviewing evidence';
+    case 'Notebook':
+      return 'Opening notebook';
     case 'GameOver':
       return 'Processing verdict';
     default:

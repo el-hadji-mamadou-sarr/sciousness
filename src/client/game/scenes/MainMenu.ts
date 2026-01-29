@@ -15,6 +15,7 @@ export class MainMenu extends Scene {
   private caseTitle: GameObjects.Text | null = null;
   private startButton: GameObjects.Container | null = null;
   private viewResultButton: GameObjects.Container | null = null;
+  private profileButton: GameObjects.Container | null = null;
   private instructions: GameObjects.Text | null = null;
   private footer: GameObjects.Text | null = null;
   private statusText: GameObjects.Text | null = null;
@@ -38,6 +39,7 @@ export class MainMenu extends Scene {
     this.caseTitle = null;
     this.startButton = null;
     this.viewResultButton = null;
+    this.profileButton = null;
     this.instructions = null;
     this.footer = null;
     this.statusText = null;
@@ -171,6 +173,19 @@ export class MainMenu extends Scene {
       this.createNewPlayerUI(width, height, mobile);
     }
 
+    // Profile button (top right corner)
+    if (!this.profileButton) {
+      this.profileButton = createNoirButton(this, width - 70, 30, '[ PROFILE ]', {
+        size: 'small',
+        color: 'cyan',
+        hoverColor: 'gold',
+        onClick: () => this.goToProfile(),
+        padding: { x: 12, y: 8 },
+      });
+    } else {
+      this.profileButton.setPosition(width - 70, 30);
+    }
+
     // Footer
     if (!this.footer) {
       this.footer = createNoirText(this, width / 2, height - 20, 'A REDDIT DEVVIT GAME', {
@@ -182,6 +197,10 @@ export class MainMenu extends Scene {
     } else {
       this.footer.setPosition(width / 2, height - 20);
     }
+  }
+
+  private goToProfile(): void {
+    transitionToScene(this, 'Profile');
   }
 
   private createNewPlayerUI(width: number, height: number, mobile: boolean): void {

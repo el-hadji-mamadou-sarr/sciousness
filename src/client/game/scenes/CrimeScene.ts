@@ -47,6 +47,10 @@ export class CrimeScene extends Scene {
     const { width, height } = this.scale;
     this.cameras.main.setBackgroundColor(0x0a0a14);
     await this.loadGameData();
+
+    // Record game start time for Speed Demon achievement
+    this.recordGameStart();
+
     this.createCrimeBoard(width, height);
     this.createInfoPanel(width, height);
     this.createCluePanel(width, height);
@@ -60,6 +64,14 @@ export class CrimeScene extends Scene {
     this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
       this.handleResize(gameSize.width, gameSize.height);
     });
+  }
+
+  private async recordGameStart(): Promise<void> {
+    try {
+      await fetch('/api/game/start', { method: 'POST' });
+    } catch (error) {
+      console.error('Failed to record game start:', error);
+    }
   }
 
   private async loadGameData(): Promise<void> {

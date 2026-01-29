@@ -14,6 +14,7 @@ export class QuickNotes {
   private notesText: string = '';
   private caseId: string;
   private inputElement: HTMLTextAreaElement | null = null;
+  private htmlCloseButton: HTMLButtonElement | null = null;
 
   constructor(scene: Scene, caseId: string) {
     this.scene = scene;
@@ -154,12 +155,44 @@ export class QuickNotes {
 
     document.body.appendChild(this.inputElement);
     this.inputElement.focus();
+
+    // Create HTML close button for mobile - positioned above the textarea
+    if (mobile) {
+      this.htmlCloseButton = document.createElement('button');
+      this.htmlCloseButton.textContent = '✕ CLOSE';
+      this.htmlCloseButton.style.cssText = `
+        position: absolute;
+        left: 50%;
+        top: calc(50% - ${panelHeight / 2 - 25}px);
+        transform: translateX(-50%);
+        background: rgba(40, 40, 60, 0.95);
+        border: 1px solid #ffd700;
+        border-radius: 4px;
+        color: #ffd700;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        padding: 8px 20px;
+        cursor: pointer;
+        z-index: 1001;
+        touch-action: manipulation;
+      `;
+      this.htmlCloseButton.addEventListener('click', () => this.close());
+      this.htmlCloseButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        this.close();
+      });
+      document.body.appendChild(this.htmlCloseButton);
+    }
   }
 
   private removeTextInput(): void {
     if (this.inputElement) {
       this.inputElement.remove();
       this.inputElement = null;
+    }
+    if (this.htmlCloseButton) {
+      this.htmlCloseButton.remove();
+      this.htmlCloseButton = null;
     }
   }
 

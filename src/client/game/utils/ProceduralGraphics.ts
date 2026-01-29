@@ -618,3 +618,400 @@ function drawEvidenceMarker(g: GameObjects.Graphics, x: number, y: number, w: nu
   g.fillStyle(0xffd700, 1);
   g.fillRect(x + w * 0.45, y + h * 0.8, w * 0.1, h * 0.2);
 }
+
+// ===============================
+// ACHIEVEMENT BADGE DRAWING
+// ===============================
+
+// Rarity colors for achievements
+const RARITY_COLORS = {
+  common: { primary: 0x9ca3af, secondary: 0x6b7280, glow: 0x9ca3af },
+  rare: { primary: 0x3b82f6, secondary: 0x1d4ed8, glow: 0x60a5fa },
+  epic: { primary: 0xa855f7, secondary: 0x7c3aed, glow: 0xc084fc },
+  legendary: { primary: 0xf59e0b, secondary: 0xd97706, glow: 0xfbbf24 },
+};
+
+export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+/**
+ * Draw a procedural achievement badge
+ */
+export function drawAchievementBadge(
+  g: GameObjects.Graphics,
+  x: number,
+  y: number,
+  size: number,
+  achievementType: string,
+  rarity: AchievementRarity,
+  isUnlocked: boolean = true
+): void {
+  const colors = RARITY_COLORS[rarity];
+  const alpha = isUnlocked ? 1 : 0.35;
+
+  // Outer glow (for unlocked badges)
+  if (isUnlocked) {
+    g.fillStyle(colors.glow, 0.15);
+    g.fillCircle(x, y, size * 0.65);
+    g.fillStyle(colors.glow, 0.1);
+    g.fillCircle(x, y, size * 0.75);
+  }
+
+  // Badge background
+  g.fillStyle(isUnlocked ? 0x1a1a2e : 0x101018, alpha);
+  g.fillCircle(x, y, size * 0.5);
+
+  // Badge border
+  g.lineStyle(3, colors.primary, alpha);
+  g.strokeCircle(x, y, size * 0.5);
+
+  // Inner ring
+  g.lineStyle(1, colors.secondary, alpha * 0.6);
+  g.strokeCircle(x, y, size * 0.4);
+
+  // Draw the specific achievement icon
+  if (isUnlocked) {
+    drawAchievementIcon(g, x, y, size * 0.35, achievementType, colors.primary);
+  } else {
+    // Locked icon
+    drawLockIcon(g, x, y, size * 0.25);
+  }
+
+  // Decorative corners for legendary
+  if (rarity === 'legendary' && isUnlocked) {
+    drawLegendarySparkles(g, x, y, size);
+  }
+}
+
+function drawAchievementIcon(
+  g: GameObjects.Graphics,
+  x: number,
+  y: number,
+  size: number,
+  type: string,
+  color: number
+): void {
+  switch (type) {
+    case 'first_blood':
+      drawBloodDrop(g, x, y, size, color);
+      break;
+    case 'speed_demon':
+      drawLightningBolt(g, x, y, size, color);
+      break;
+    case 'thorough':
+      drawMagnifyingGlass(g, x, y, size, color);
+      break;
+    case 'lone_wolf':
+      drawWolfHead(g, x, y, size, color);
+      break;
+    case 'streak_3':
+    case 'streak_7':
+    case 'streak_30':
+      drawFlame(g, x, y, size, color);
+      break;
+    case 'perfect_record':
+      drawStar(g, x, y, size, color);
+      break;
+    case 'veteran':
+      drawMedal(g, x, y, size, color);
+      break;
+    case 'master':
+      drawTrophy(g, x, y, size, color);
+      break;
+    case 'legend':
+      drawCrown(g, x, y, size, color);
+      break;
+    default:
+      drawStar(g, x, y, size, color);
+  }
+}
+
+function drawBloodDrop(g: GameObjects.Graphics, x: number, y: number, size: number, color: number): void {
+  g.fillStyle(0xdc2626, 1);
+
+  // Drop shape using triangle + circle
+  g.fillTriangle(
+    x, y - size * 0.8,
+    x - size * 0.5, y + size * 0.1,
+    x + size * 0.5, y + size * 0.1
+  );
+  g.fillCircle(x, y + size * 0.25, size * 0.5);
+
+  // Highlight
+  g.fillStyle(0xffffff, 0.4);
+  g.fillCircle(x - size * 0.15, y, size * 0.15);
+}
+
+function drawLightningBolt(g: GameObjects.Graphics, x: number, y: number, size: number, color: number): void {
+  g.fillStyle(0xfbbf24, 1);
+
+  // Lightning bolt shape
+  g.beginPath();
+  g.moveTo(x + size * 0.2, y - size * 0.8);
+  g.lineTo(x - size * 0.4, y + size * 0.1);
+  g.lineTo(x, y + size * 0.1);
+  g.lineTo(x - size * 0.2, y + size * 0.8);
+  g.lineTo(x + size * 0.4, y - size * 0.1);
+  g.lineTo(x, y - size * 0.1);
+  g.closePath();
+  g.fillPath();
+
+  // Inner glow
+  g.fillStyle(0xfef3c7, 0.6);
+  g.fillCircle(x, y, size * 0.2);
+}
+
+function drawMagnifyingGlass(g: GameObjects.Graphics, x: number, y: number, size: number, color: number): void {
+  // Glass circle
+  g.lineStyle(4, color, 1);
+  g.strokeCircle(x - size * 0.15, y - size * 0.15, size * 0.45);
+
+  // Glass fill
+  g.fillStyle(0x87ceeb, 0.3);
+  g.fillCircle(x - size * 0.15, y - size * 0.15, size * 0.42);
+
+  // Handle
+  g.lineStyle(5, color, 1);
+  g.lineBetween(x + size * 0.15, y + size * 0.15, x + size * 0.6, y + size * 0.6);
+
+  // Glare
+  g.fillStyle(0xffffff, 0.5);
+  g.fillCircle(x - size * 0.3, y - size * 0.3, size * 0.12);
+}
+
+function drawWolfHead(g: GameObjects.Graphics, x: number, y: number, size: number, color: number): void {
+  // Wolf head silhouette
+  g.fillStyle(0x4b5563, 1);
+
+  // Head base
+  g.fillTriangle(
+    x, y + size * 0.6,
+    x - size * 0.6, y + size * 0.2,
+    x + size * 0.6, y + size * 0.2
+  );
+
+  // Snout
+  g.fillTriangle(
+    x, y + size * 0.8,
+    x - size * 0.3, y + size * 0.4,
+    x + size * 0.3, y + size * 0.4
+  );
+
+  // Ears
+  g.fillTriangle(
+    x - size * 0.5, y - size * 0.1,
+    x - size * 0.7, y - size * 0.7,
+    x - size * 0.2, y - size * 0.2
+  );
+  g.fillTriangle(
+    x + size * 0.5, y - size * 0.1,
+    x + size * 0.7, y - size * 0.7,
+    x + size * 0.2, y - size * 0.2
+  );
+
+  // Eyes
+  g.fillStyle(0xfbbf24, 1);
+  g.fillCircle(x - size * 0.25, y + size * 0.15, size * 0.1);
+  g.fillCircle(x + size * 0.25, y + size * 0.15, size * 0.1);
+
+  // Pupils
+  g.fillStyle(0x000000, 1);
+  g.fillCircle(x - size * 0.25, y + size * 0.15, size * 0.04);
+  g.fillCircle(x + size * 0.25, y + size * 0.15, size * 0.04);
+}
+
+function drawFlame(g: GameObjects.Graphics, x: number, y: number, size: number, color: number): void {
+  // Outer flame
+  g.fillStyle(0xf97316, 1);
+  g.beginPath();
+  g.moveTo(x, y - size * 0.8);
+  g.quadraticCurveTo(x + size * 0.6, y - size * 0.3, x + size * 0.4, y + size * 0.5);
+  g.quadraticCurveTo(x + size * 0.2, y + size * 0.8, x, y + size * 0.6);
+  g.quadraticCurveTo(x - size * 0.2, y + size * 0.8, x - size * 0.4, y + size * 0.5);
+  g.quadraticCurveTo(x - size * 0.6, y - size * 0.3, x, y - size * 0.8);
+  g.closePath();
+  g.fillPath();
+
+  // Inner flame
+  g.fillStyle(0xfbbf24, 1);
+  g.beginPath();
+  g.moveTo(x, y - size * 0.4);
+  g.quadraticCurveTo(x + size * 0.3, y, x + size * 0.2, y + size * 0.4);
+  g.quadraticCurveTo(x, y + size * 0.6, x - size * 0.2, y + size * 0.4);
+  g.quadraticCurveTo(x - size * 0.3, y, x, y - size * 0.4);
+  g.closePath();
+  g.fillPath();
+
+  // Core
+  g.fillStyle(0xfef3c7, 0.8);
+  g.fillEllipse(x, y + size * 0.2, size * 0.15, size * 0.25);
+}
+
+function drawStar(g: GameObjects.Graphics, x: number, y: number, size: number, color: number): void {
+  g.fillStyle(color, 1);
+
+  const points = 5;
+  const outerRadius = size * 0.8;
+  const innerRadius = size * 0.35;
+
+  g.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const radius = i % 2 === 0 ? outerRadius : innerRadius;
+    const angle = (i * Math.PI) / points - Math.PI / 2;
+    const px = x + Math.cos(angle) * radius;
+    const py = y + Math.sin(angle) * radius;
+    if (i === 0) {
+      g.moveTo(px, py);
+    } else {
+      g.lineTo(px, py);
+    }
+  }
+  g.closePath();
+  g.fillPath();
+
+  // Sparkle in center
+  g.fillStyle(0xffffff, 0.6);
+  g.fillCircle(x, y, size * 0.15);
+}
+
+function drawMedal(g: GameObjects.Graphics, x: number, y: number, size: number, color: number): void {
+  // Ribbon
+  g.fillStyle(0xdc2626, 1);
+  g.fillRect(x - size * 0.25, y - size * 0.9, size * 0.2, size * 0.5);
+  g.fillRect(x + size * 0.05, y - size * 0.9, size * 0.2, size * 0.5);
+
+  // Medal circle
+  g.fillStyle(color, 1);
+  g.fillCircle(x, y + size * 0.15, size * 0.55);
+
+  // Inner circle
+  g.fillStyle(darkenColor(color, 0.2), 1);
+  g.fillCircle(x, y + size * 0.15, size * 0.4);
+
+  // Star on medal
+  g.fillStyle(0xffffff, 0.8);
+  const starSize = size * 0.25;
+  g.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const radius = i % 2 === 0 ? starSize : starSize * 0.4;
+    const angle = (i * Math.PI) / 5 - Math.PI / 2;
+    const px = x + Math.cos(angle) * radius;
+    const py = y + size * 0.15 + Math.sin(angle) * radius;
+    if (i === 0) g.moveTo(px, py);
+    else g.lineTo(px, py);
+  }
+  g.closePath();
+  g.fillPath();
+}
+
+function drawTrophy(g: GameObjects.Graphics, x: number, y: number, size: number, color: number): void {
+  // Cup body
+  g.fillStyle(color, 1);
+  g.fillRoundedRect(x - size * 0.4, y - size * 0.5, size * 0.8, size * 0.7, 8);
+
+  // Handles
+  g.lineStyle(4, color, 1);
+  g.beginPath();
+  g.arc(x - size * 0.55, y - size * 0.2, size * 0.2, -Math.PI * 0.5, Math.PI * 0.5, false);
+  g.strokePath();
+  g.beginPath();
+  g.arc(x + size * 0.55, y - size * 0.2, size * 0.2, Math.PI * 0.5, -Math.PI * 0.5, false);
+  g.strokePath();
+
+  // Stem
+  g.fillStyle(color, 1);
+  g.fillRect(x - size * 0.1, y + size * 0.2, size * 0.2, size * 0.3);
+
+  // Base
+  g.fillStyle(darkenColor(color, 0.2), 1);
+  g.fillRect(x - size * 0.3, y + size * 0.5, size * 0.6, size * 0.15);
+  g.fillRect(x - size * 0.4, y + size * 0.65, size * 0.8, size * 0.1);
+
+  // Shine
+  g.fillStyle(0xffffff, 0.3);
+  g.fillRect(x - size * 0.25, y - size * 0.4, size * 0.15, size * 0.5);
+}
+
+function drawCrown(g: GameObjects.Graphics, x: number, y: number, size: number, color: number): void {
+  // Crown base
+  g.fillStyle(color, 1);
+  g.fillRect(x - size * 0.6, y + size * 0.2, size * 1.2, size * 0.4);
+
+  // Crown points
+  g.beginPath();
+  g.moveTo(x - size * 0.6, y + size * 0.2);
+  g.lineTo(x - size * 0.6, y - size * 0.3);
+  g.lineTo(x - size * 0.3, y + size * 0.1);
+  g.lineTo(x, y - size * 0.6);
+  g.lineTo(x + size * 0.3, y + size * 0.1);
+  g.lineTo(x + size * 0.6, y - size * 0.3);
+  g.lineTo(x + size * 0.6, y + size * 0.2);
+  g.closePath();
+  g.fillPath();
+
+  // Jewels
+  g.fillStyle(0xdc2626, 1);
+  g.fillCircle(x, y - size * 0.35, size * 0.12);
+
+  g.fillStyle(0x3b82f6, 1);
+  g.fillCircle(x - size * 0.45, y - size * 0.1, size * 0.08);
+  g.fillCircle(x + size * 0.45, y - size * 0.1, size * 0.08);
+
+  // Band detail
+  g.fillStyle(darkenColor(color, 0.2), 1);
+  g.fillRect(x - size * 0.6, y + size * 0.35, size * 1.2, size * 0.1);
+}
+
+function drawLockIcon(g: GameObjects.Graphics, x: number, y: number, size: number): void {
+  // Lock body
+  g.fillStyle(0x4b5563, 1);
+  g.fillRoundedRect(x - size * 0.5, y - size * 0.1, size, size * 0.8, 4);
+
+  // Lock shackle
+  g.lineStyle(4, 0x4b5563, 1);
+  g.beginPath();
+  g.arc(x, y - size * 0.2, size * 0.35, Math.PI, 0, false);
+  g.strokePath();
+
+  // Keyhole
+  g.fillStyle(0x1f2937, 1);
+  g.fillCircle(x, y + size * 0.15, size * 0.15);
+  g.fillRect(x - size * 0.06, y + size * 0.15, size * 0.12, size * 0.25);
+}
+
+function drawLegendarySparkles(g: GameObjects.Graphics, x: number, y: number, size: number): void {
+  g.fillStyle(0xfbbf24, 0.8);
+
+  // Sparkle points around the badge
+  const sparklePositions = [
+    { angle: -45, dist: 0.6 },
+    { angle: 45, dist: 0.6 },
+    { angle: -135, dist: 0.55 },
+    { angle: 135, dist: 0.55 },
+    { angle: 0, dist: 0.65 },
+    { angle: 180, dist: 0.65 },
+  ];
+
+  for (const pos of sparklePositions) {
+    const rad = (pos.angle * Math.PI) / 180;
+    const sx = x + Math.cos(rad) * size * pos.dist;
+    const sy = y + Math.sin(rad) * size * pos.dist;
+
+    // 4-point star sparkle
+    const sparkleSize = size * 0.08;
+    g.beginPath();
+    g.moveTo(sx, sy - sparkleSize);
+    g.lineTo(sx + sparkleSize * 0.3, sy);
+    g.lineTo(sx, sy + sparkleSize);
+    g.lineTo(sx - sparkleSize * 0.3, sy);
+    g.closePath();
+    g.fillPath();
+
+    g.beginPath();
+    g.moveTo(sx - sparkleSize, sy);
+    g.lineTo(sx, sy + sparkleSize * 0.3);
+    g.lineTo(sx + sparkleSize, sy);
+    g.lineTo(sx, sy - sparkleSize * 0.3);
+    g.closePath();
+    g.fillPath();
+  }
+}

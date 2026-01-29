@@ -12,6 +12,9 @@ import {
   DetectiveProfile,
   DetectiveLeaderboardEntry,
   DetectiveLeaderboardResponse,
+  AchievementId,
+  ACHIEVEMENTS,
+  Case,
 } from '../shared/types/game';
 import { redis, reddit, createServer, context } from '@devvit/web/server';
 import { createPost } from './core/post';
@@ -65,7 +68,18 @@ async function getDetectiveProfile(): Promise<DetectiveProfile> {
   const data = await redis.get(key);
 
   if (data) {
-    return JSON.parse(data) as DetectiveProfile;
+    const profile = JSON.parse(data) as DetectiveProfile;
+    // Ensure new fields exist for backwards compatibility
+    return {
+      ...profile,
+      achievements: profile.achievements || [],
+      currentStreak: profile.currentStreak || 0,
+      longestStreak: profile.longestStreak || 0,
+      totalAccusations: profile.totalAccusations || 0,
+      correctAccusations: profile.correctAccusations || 0,
+      consecutiveCorrect: profile.consecutiveCorrect || 0,
+      gameStartTimes: profile.gameStartTimes || {},
+    };
   }
 
   // Default profile
@@ -74,6 +88,13 @@ async function getDetectiveProfile(): Promise<DetectiveProfile> {
     points: 0,
     solvedCases: [],
     username: context.username || 'Anonymous',
+    achievements: [],
+    currentStreak: 0,
+    longestStreak: 0,
+    totalAccusations: 0,
+    correctAccusations: 0,
+    consecutiveCorrect: 0,
+    gameStartTimes: {},
   };
 }
 
@@ -85,6 +106,143 @@ async function saveDetectiveProfile(profile: DetectiveProfile): Promise<void> {
 
   // Also update the leaderboard sorted set
   await redis.zAdd('leaderboard:points', { member: userId, score: profile.points });
+}
+
+// Helper to get today's date as ISO string (YYYY-MM-DD)
+function getTodayDateString(): string {
+  const dateStr = new Date().toISOString().split('T')[0];
+  return dateStr || new Date().toISOString().substring(0, 10);
+}
+
+// Helper to check if two dates are consecutive days
+function areConsecutiveDays(date1: string, date2: string): boolean {
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  const diffTime = Math.abs(d2.getTime() - d1.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays === 1;
+}
+
+// Helper to check and award achievements
+async function checkAndAwardAchievements(
+  profile: DetectiveProfile,
+  currentCase: Case,
+  postId: string,
+  cluesFound: string[],
+  isCorrect: boolean
+): Promise<AchievementId[]> {
+  const newAchievements: AchievementId[] = [];
+  const now = Date.now();
+  const today = getTodayDateString();
+
+  // Helper to award an achievement if not already earned
+  const awardIfNew = (achievementId: AchievementId) => {
+    if (!profile.achievements.includes(achievementId)) {
+      profile.achievements.push(achievementId);
+      newAchievements.push(achievementId);
+    }
+  };
+
+  // Update accusation stats
+  profile.totalAccusations = (profile.totalAccusations || 0) + 1;
+
+  if (isCorrect) {
+    profile.correctAccusations = (profile.correctAccusations || 0) + 1;
+    profile.consecutiveCorrect = (profile.consecutiveCorrect || 0) + 1;
+
+    // Check streak
+    if (profile.lastSolveDate) {
+      if (areConsecutiveDays(profile.lastSolveDate, today)) {
+        profile.currentStreak = (profile.currentStreak || 0) + 1;
+      } else if (profile.lastSolveDate !== today) {
+        // Streak broken, reset to 1
+        profile.currentStreak = 1;
+      }
+    } else {
+      profile.currentStreak = 1;
+    }
+
+    // Update longest streak
+    if (profile.currentStreak > (profile.longestStreak || 0)) {
+      profile.longestStreak = profile.currentStreak;
+    }
+
+    profile.lastSolveDate = today;
+
+    // === ACHIEVEMENT CHECKS ===
+
+    // 1. First Blood - solve on first day (check if case was created today)
+    // For simplicity, we award this if they're among the first 10 solvers
+    const solvedKey = `stats:${postId}:solved`;
+    const solvedStr = await redis.get(solvedKey);
+    const solvedCount = solvedStr ? parseInt(solvedStr, 10) : 0;
+    if (solvedCount <= 10) {
+      awardIfNew('first_blood');
+    }
+
+    // 2. Speed Demon - solve in under 5 minutes
+    const startTime = profile.gameStartTimes?.[postId];
+    if (startTime && (now - startTime) < 5 * 60 * 1000) {
+      awardIfNew('speed_demon');
+    }
+
+    // 3. Thorough Detective - find all clues before accusing
+    const totalClues = currentCase.clues.length;
+    if (cluesFound.length >= totalClues) {
+      awardIfNew('thorough');
+    }
+
+    // 4. Lone Wolf - solve when <10% got it right (checked later, after stats update)
+    // We'll check this after the stats are updated
+
+    // 5. Streak achievements
+    if (profile.currentStreak >= 3) awardIfNew('streak_3');
+    if (profile.currentStreak >= 7) awardIfNew('streak_7');
+    if (profile.currentStreak >= 30) awardIfNew('streak_30');
+
+    // 6. Perfect Record - 5 correct in a row
+    if (profile.consecutiveCorrect >= 5) {
+      awardIfNew('perfect_record');
+    }
+
+    // 7. Milestone achievements based on total solves
+    const totalSolves = profile.solvedCases.length + 1; // +1 for current solve
+    if (totalSolves >= 10) awardIfNew('veteran');
+    if (totalSolves >= 25) awardIfNew('master');
+    if (totalSolves >= 50) awardIfNew('legend');
+
+  } else {
+    // Wrong accusation - reset consecutive correct
+    profile.consecutiveCorrect = 0;
+  }
+
+  return newAchievements;
+}
+
+// Helper to check Lone Wolf achievement (must be called after stats are updated)
+async function checkLoneWolfAchievement(
+  profile: DetectiveProfile,
+  postId: string
+): Promise<AchievementId | null> {
+  const totalKey = `stats:${postId}:total`;
+  const solvedKey = `stats:${postId}:solved`;
+
+  const totalStr = await redis.get(totalKey);
+  const solvedStr = await redis.get(solvedKey);
+
+  const totalPlayers = totalStr ? parseInt(totalStr, 10) : 0;
+  const solvedCount = solvedStr ? parseInt(solvedStr, 10) : 0;
+
+  // Need at least 10 players for this to count
+  if (totalPlayers >= 10) {
+    const solveRate = (solvedCount / totalPlayers) * 100;
+    if (solveRate < 10 && !profile.achievements.includes('lone_wolf')) {
+      profile.achievements.push('lone_wolf');
+      return 'lone_wolf';
+    }
+  }
+
+  return null;
 }
 
 // Helper to award points for solving a case (returns points earned, 0 if already solved)
@@ -253,13 +411,42 @@ router.post<object, AccuseResponse | { status: string; message: string }, Accuse
         alreadySolved = pointsResult.alreadySolved;
       }
 
+      // Check and award achievements
+      let newAchievements: AchievementId[] = [];
+      if (!alreadySolved) {
+        const profile = await getDetectiveProfile();
+        newAchievements = await checkAndAwardAchievements(
+          profile,
+          currentCase,
+          postId,
+          progress.cluesFound,
+          progress.correct
+        );
+
+        // Check Lone Wolf achievement after stats are updated
+        if (progress.correct) {
+          const loneWolf = await checkLoneWolfAchievement(profile, postId);
+          if (loneWolf) {
+            newAchievements.push(loneWolf);
+          }
+        }
+
+        // Save updated profile with achievements
+        await saveDetectiveProfile(profile);
+      }
+
       // Post a comment on the game post (only for correct accusations, first time only)
       if (progress.correct && !alreadySolved) {
         const username = context.username || 'A detective';
         try {
+          let commentText = `🔍 **${username}** solved the case and earned ${pointsEarned} points!`;
+          if (newAchievements.length > 0) {
+            const achievementNames = newAchievements.map(id => ACHIEVEMENTS[id].icon + ' ' + ACHIEVEMENTS[id].name);
+            commentText += `\n\n🏆 **New Achievements:** ${achievementNames.join(', ')}`;
+          }
           await reddit.submitComment({
             id: postId,
-            text: `🔍 **${username}** solved the case and earned ${pointsEarned} points!`,
+            text: commentText,
           });
         } catch (commentError) {
           console.error('Failed to post comment:', commentError);
@@ -278,6 +465,7 @@ router.post<object, AccuseResponse | { status: string; message: string }, Accuse
         pointsEarned,
         totalPoints: profile.points,
         alreadySolved,
+        newAchievements: newAchievements.length > 0 ? newAchievements : undefined,
       });
     } catch (error) {
       console.error(`API Accuse Error:`, error);
@@ -317,6 +505,43 @@ router.get<object, { type: string; postId: string; progress: PlayerProgress } | 
       res.status(400).json({
         status: 'error',
         message: 'Failed to get progress',
+      });
+    }
+  }
+);
+
+// Record game start time (for Speed Demon achievement)
+router.post<object, { type: string; started: boolean } | { status: string; message: string }>(
+  '/api/game/start',
+  async (_req, res): Promise<void> => {
+    const { postId } = context;
+
+    if (!postId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'postId is required',
+      });
+      return;
+    }
+
+    try {
+      const profile = await getDetectiveProfile();
+
+      // Only record start time if not already set for this post
+      if (!profile.gameStartTimes[postId]) {
+        profile.gameStartTimes[postId] = Date.now();
+        await saveDetectiveProfile(profile);
+      }
+
+      res.json({
+        type: 'game_start',
+        started: true,
+      });
+    } catch (error) {
+      console.error(`API Game Start Error:`, error);
+      res.status(400).json({
+        status: 'error',
+        message: 'Failed to record game start',
       });
     }
   }

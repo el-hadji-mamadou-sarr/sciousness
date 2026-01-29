@@ -21,6 +21,7 @@ export class Accusation extends Scene {
   private lastY: number = 0;
   private dragStartY: number = 0;
   private hasMoved: boolean = false;
+  private panelWasVisible: boolean = false;
 
   constructor() {
     super('Accusation');
@@ -230,10 +231,12 @@ export class Accusation extends Scene {
     });
 
     container.on('pointerup', () => {
-      // Only trigger if we didn't scroll (tap vs drag)
-      if (!this.hasMoved) {
+      // Only trigger if we didn't scroll (tap vs drag) and panel wasn't just closed
+      if (!this.hasMoved && !this.confirmPanel?.visible && !this.panelWasVisible) {
         this.showConfirmation(suspect);
       }
+      // Reset the flag after pointerup
+      this.panelWasVisible = false;
     });
 
     return container;
@@ -316,7 +319,10 @@ export class Accusation extends Scene {
   }
 
   private hideConfirmation(): void {
-    if (this.confirmPanel) this.confirmPanel.setVisible(false);
+    if (this.confirmPanel) {
+      this.panelWasVisible = true;
+      this.confirmPanel.setVisible(false);
+    }
     this.selectedSuspect = null;
   }
 

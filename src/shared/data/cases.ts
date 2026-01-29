@@ -2,6 +2,7 @@ import { Case } from '../types/game';
 import { case2 } from '../../client/game/scenes/crime-scenes/case2';
 import { case3 } from '../../client/game/scenes/crime-scenes/case3';
 import { case5 } from '../../client/game/scenes/crime-scenes/case5';
+import { case6 } from '../../client/game/scenes/crime-scenes/case6';
 
 // Sample case for MVP
 export const CASE_001: Case = {
@@ -262,16 +263,17 @@ export const CASE_001: Case = {
   ],
 };
 
-export const ALL_CASES: Case[] = [CASE_001, case2, case3, case5];
+export const ALL_CASES: Case[] = [CASE_001, case2, case3, case5, case6];
 
 // Map day of week to case
 // Wednesday (3) -> case5
+// Thursday (4) -> case6
 const DAY_TO_CASE: Record<number, Case> = {
   0: case2, // Sunday
   1: case3, // Monday
   2: CASE_001, // Tuesday
   3: case5, // Wednesday
-  4: CASE_001, // Thursday
+  4: case6, // Thursday
   5: case2, // Friday
   6: case3, // Saturday
 };

@@ -33,7 +33,13 @@ export class Accusation extends Scene {
       origin: { x: 0.5, y: 0.5 },
     });
 
-    createNoirText(this, width / 2, this.isMobile() ? 42 : 55, 'ONE CHANCE ONLY!', {
+    createNoirText(this, width / 2, this.isMobile() ? 38 : 50, 'TAP SUSPECT TO ACCUSE', {
+      size: 'small',
+      color: 'gray',
+      origin: { x: 0.5, y: 0.5 },
+    });
+
+    createNoirText(this, width / 2, this.isMobile() ? 54 : 68, 'ONE CHANCE ONLY!', {
       size: 'small',
       color: 'gold',
       origin: { x: 0.5, y: 0.5 },
@@ -120,18 +126,30 @@ export class Accusation extends Scene {
       size: 'small',
       color: 'gray',
       origin: { x: 0, y: 0 },
-      maxWidth: cardWidth - portraitSize - (mobile ? 100 : 120),
+      maxWidth: cardWidth - portraitSize - 40,
     }));
 
-    // Accuse button
-    const accuseBtn = createNoirButton(this, cardWidth / 2 - 50, cardHeight / 2, 'ACCUSE', {
-      size: 'small',
-      color: 'red',
-      hoverColor: 'gold',
-      onClick: () => this.showConfirmation(suspect),
-      padding: { x: 12, y: 8 },
+    // Make entire card tappable
+    const hitArea = new Phaser.Geom.Rectangle(-cardWidth / 2, 0, cardWidth, cardHeight);
+    container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+
+    container.on('pointerover', () => {
+      bg.clear();
+      bg.fillStyle(0x1e2a4a, 0.95);
+      bg.fillRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
+      bg.lineStyle(2, 0xff4444, 1);
+      bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
     });
-    container.add(accuseBtn);
+
+    container.on('pointerout', () => {
+      bg.clear();
+      bg.fillStyle(0x16213e, 0.9);
+      bg.fillRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
+      bg.lineStyle(2, 0x394867, 1);
+      bg.strokeRoundedRect(-cardWidth / 2, 0, cardWidth, cardHeight, 6);
+    });
+
+    container.on('pointerdown', () => this.showConfirmation(suspect));
 
     return container;
   }

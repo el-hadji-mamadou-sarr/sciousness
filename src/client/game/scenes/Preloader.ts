@@ -145,11 +145,11 @@ export class Preloader extends Scene {
     // Load bitmap fonts for crisp text rendering
     loadBitmapFonts(this);
 
-    // Brief delay to show completion, then fade to MainMenu
+    // Brief delay to show completion, then fade to ModeSelect
     this.time.delayedCall(300, () => {
       this.cameras.main.fadeOut(300, 10, 10, 20);
       this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('MainMenu');
+        this.scene.start('ModeSelect');
       });
     });
   }

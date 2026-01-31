@@ -4,7 +4,11 @@ import { context } from '@devvit/web/client';
 import { transitionToScene } from '../utils/SceneTransition';
 import { createNoirText, createNoirButton, isMobileScreen, getScaleFactor } from '../utils/NoirText';
 import { AudioManager } from '../utils/AudioManager';
-import { GameStateManager } from '../utils/GameStateManager';
+import { GameStateManager, GameMode } from '../utils/GameStateManager';
+
+interface MainMenuData {
+  gameMode?: GameMode;
+}
 
 // Admin usernames that can play unlimited times for testing
 const ADMIN_USERNAMES = ['ashscars'];
@@ -17,6 +21,7 @@ export class MainMenu extends Scene {
   private startButton: GameObjects.Container | null = null;
   private viewResultButton: GameObjects.Container | null = null;
   private profileButton: GameObjects.Container | null = null;
+  private backButton: GameObjects.Container | null = null;
   private instructions: GameObjects.Text | null = null;
   private footer: GameObjects.Text | null = null;
   private statusText: GameObjects.Text | null = null;
@@ -32,6 +37,9 @@ export class MainMenu extends Scene {
   private chapterStatuses: ChapterStatus[] = [];
   private currentDayNumber: number = 1;
 
+  // Mode selection from ModeSelect scene
+  private selectedMode: GameMode | null = null;
+
   constructor() {
     super('MainMenu');
   }
@@ -40,7 +48,7 @@ export class MainMenu extends Scene {
     return isMobileScreen(this);
   }
 
-  init(): void {
+  init(data?: MainMenuData): void {
     this.noirBg = null;
     this.title = null;
     this.subtitle = null;
@@ -48,6 +56,7 @@ export class MainMenu extends Scene {
     this.startButton = null;
     this.viewResultButton = null;
     this.profileButton = null;
+    this.backButton = null;
     this.instructions = null;
     this.footer = null;
     this.statusText = null;
@@ -58,6 +67,11 @@ export class MainMenu extends Scene {
     this.weeklyProgress = null;
     this.chapterStatuses = [];
     this.currentDayNumber = 1;
+    // Set selected mode from data or GameStateManager
+    this.selectedMode = data?.gameMode ?? GameStateManager.getSelectedGameMode();
+    if (data?.gameMode) {
+      GameStateManager.setSelectedGameMode(data.gameMode);
+    }
   }
 
   async create() {
@@ -70,22 +84,30 @@ export class MainMenu extends Scene {
   }
 
   private async loadGameData(): Promise<void> {
-    // Try weekly mode first using GameStateManager
-    try {
-      const weeklyData = await GameStateManager.loadWeeklyGameData();
-      if (weeklyData.weeklyCase) {
-        this.isWeeklyMode = true;
-        this.weeklyCase = weeklyData.weeklyCase;
-        this.weeklyProgress = weeklyData.weeklyProgress;
-        this.chapterStatuses = weeklyData.chapterStatuses;
-        this.currentDayNumber = weeklyData.currentDayNumber;
-        return;
-      }
-    } catch (error) {
-      console.log('Weekly mode not available, falling back to daily mode');
+    // If no mode selected, redirect to mode selection
+    if (!this.selectedMode) {
+      transitionToScene(this, 'ModeSelect');
+      return;
     }
 
-    // Fall back to daily mode
+    // Load data based on selected mode
+    if (this.selectedMode === 'weekly') {
+      try {
+        const weeklyData = await GameStateManager.loadWeeklyGameData();
+        if (weeklyData.weeklyCase) {
+          this.isWeeklyMode = true;
+          this.weeklyCase = weeklyData.weeklyCase;
+          this.weeklyProgress = weeklyData.weeklyProgress;
+          this.chapterStatuses = weeklyData.chapterStatuses;
+          this.currentDayNumber = weeklyData.currentDayNumber;
+          return;
+        }
+      } catch (error) {
+        console.log('Weekly mode not available, falling back to daily mode');
+      }
+    }
+
+    // Daily mode (or fallback if weekly failed)
     try {
       const response = await fetch('/api/game/init');
       if (!response.ok) throw new Error(`API error: ${response.status}`);
@@ -227,6 +249,19 @@ export class MainMenu extends Scene {
       this.createNewPlayerUI(width, height, mobile);
     }
 
+    // Back button (top left corner) - go back to mode selection
+    if (!this.backButton) {
+      this.backButton = createNoirButton(this, 60, 30, '[ BACK ]', {
+        size: 'small',
+        color: 'gray',
+        hoverColor: 'gold',
+        onClick: () => this.goToModeSelect(),
+        padding: { x: 12, y: 8 },
+      });
+    } else {
+      this.backButton.setPosition(60, 30);
+    }
+
     // Profile button (top right corner)
     if (!this.profileButton) {
       this.profileButton = createNoirButton(this, width - 70, 30, '[ PROFILE ]', {
@@ -255,6 +290,10 @@ export class MainMenu extends Scene {
 
   private goToProfile(): void {
     transitionToScene(this, 'Profile');
+  }
+
+  private goToModeSelect(): void {
+    transitionToScene(this, 'ModeSelect');
   }
 
   private createNewPlayerUI(width: number, height: number, mobile: boolean): void {

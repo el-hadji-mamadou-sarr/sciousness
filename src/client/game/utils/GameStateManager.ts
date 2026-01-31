@@ -17,6 +17,11 @@ interface SuspectDialogueState {
 }
 
 /**
+ * Game mode type for selecting between daily and weekly cases
+ */
+export type GameMode = 'daily' | 'weekly';
+
+/**
  * Game state that persists across scene transitions
  */
 interface GameState {
@@ -25,6 +30,7 @@ interface GameState {
   dialogueStates: Map<string, SuspectDialogueState>;
   currentSuspectIndex: number;
   lastLoadTime: number;
+  selectedGameMode: GameMode | null;
 }
 
 /**
@@ -50,6 +56,7 @@ class GameStateManagerClass {
     dialogueStates: new Map(),
     currentSuspectIndex: 0,
     lastLoadTime: 0,
+    selectedGameMode: null,
   };
 
   private weeklyState: WeeklyGameState = {
@@ -202,7 +209,29 @@ class GameStateManagerClass {
       dialogueStates: new Map(),
       currentSuspectIndex: 0,
       lastLoadTime: 0,
+      selectedGameMode: null,
     };
+  }
+
+  /**
+   * Set the selected game mode
+   */
+  setSelectedGameMode(mode: GameMode): void {
+    this.state.selectedGameMode = mode;
+  }
+
+  /**
+   * Get the selected game mode
+   */
+  getSelectedGameMode(): GameMode | null {
+    return this.state.selectedGameMode;
+  }
+
+  /**
+   * Check if a game mode has been selected
+   */
+  hasSelectedGameMode(): boolean {
+    return this.state.selectedGameMode !== null;
   }
 
   /**

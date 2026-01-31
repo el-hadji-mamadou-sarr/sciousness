@@ -21,6 +21,8 @@ export function transitionToScene(
  */
 function getLoadingMessage(targetScene: string): string {
   switch (targetScene) {
+    case 'ModeSelect':
+      return 'Loading case types';
     case 'MainMenu':
       return 'Returning to menu';
     case 'CrimeScene':

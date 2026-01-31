@@ -49,27 +49,45 @@ export function loadBitmapFonts(scene: Phaser.Scene): void {
 }
 
 /**
- * Create a single bitmap font using RetroFont
+ * Get the device pixel ratio for HiDPI rendering
+ */
+function getPixelRatio(): number {
+  return Math.min(window.devicePixelRatio || 1, 3); // Cap at 3x for performance
+}
+
+/**
+ * Create a single bitmap font using RetroFont with HiDPI support
  */
 function createBitmapFont(scene: Phaser.Scene, config: FontConfig): void {
   const { name, size, color } = config;
+  const dpr = getPixelRatio();
+
+  // Base dimensions (logical pixels)
   const charWidth = Math.ceil(size * 0.7);
   const charHeight = Math.ceil(size * 1.3);
   const cols = 16;
   const rows = Math.ceil(CHARS.length / cols);
 
-  // Create canvas
+  // Create canvas at HiDPI resolution
   const canvas = document.createElement('canvas');
-  canvas.width = cols * charWidth;
-  canvas.height = rows * charHeight;
+  canvas.width = cols * charWidth * dpr;
+  canvas.height = rows * charHeight * dpr;
+
+  // Set CSS size to logical pixels (for proper scaling)
+  canvas.style.width = `${cols * charWidth}px`;
+  canvas.style.height = `${rows * charHeight}px`;
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
+  // Scale context for HiDPI
+  ctx.scale(dpr, dpr);
+
   // Clear with transparency
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Configure font
+  // Configure font with crisp rendering
+  ctx.imageSmoothingEnabled = false;
   ctx.font = `${size}px "Roboto Mono", "JetBrains Mono", "Fira Code", "Inconsolata", monospace`;
   ctx.fillStyle = color;
   ctx.textBaseline = 'top';
@@ -98,10 +116,11 @@ function createBitmapFont(scene: Phaser.Scene, config: FontConfig): void {
   scene.textures.addCanvas(textureKey, canvas);
 
   // Use RetroFont.Parse for proper bitmap font creation
+  // Use the HiDPI dimensions for the texture, Phaser will handle scaling
   const retroFontConfig: Phaser.Types.GameObjects.BitmapText.RetroFontConfig = {
     image: textureKey,
-    width: charWidth,
-    height: charHeight,
+    width: charWidth * dpr,
+    height: charHeight * dpr,
     chars: CHARS,
     charsPerRow: cols,
     'offset.x': 0,

@@ -30,6 +30,7 @@ import {
 import { redis, reddit, createServer, context } from '@devvit/web/server';
 import { createPost } from './core/post';
 import { getCurrentCase } from '../shared/data/cases';
+import { getCurrentWeeklyCase } from '../shared/data/weekly-cases';
 
 // Points awarded for solving a case
 const POINTS_PER_SOLVE = 100;
@@ -762,16 +763,6 @@ router.get<object, { type: string; profile: DetectiveProfile } | { status: strin
 // ============================================
 // WEEKLY CASE SYSTEM ENDPOINTS
 // ============================================
-
-// Import weekly case data (will be created later)
-// For now, we'll use a placeholder
-let getCurrentWeeklyCase: () => WeeklyCase | null;
-try {
-  // Dynamic import will be available when weekly-cases module exists
-  getCurrentWeeklyCase = () => null; // Placeholder until weekly cases are created
-} catch {
-  getCurrentWeeklyCase = () => null;
-}
 
 // Helper to get current week info
 function getCurrentWeekInfo(): { weekNumber: number; startDate: string; dayOfWeek: number } {

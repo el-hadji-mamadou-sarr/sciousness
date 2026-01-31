@@ -1,10 +1,14 @@
 import { Case } from '../types/game';
+import { case1 } from '../../client/game/scenes/crime-scenes/case1';
 import { case2 } from '../../client/game/scenes/crime-scenes/case2';
 import { case3 } from '../../client/game/scenes/crime-scenes/case3';
+import { case4 } from '../../client/game/scenes/crime-scenes/case4';
 import { case5 } from '../../client/game/scenes/crime-scenes/case5';
 import { case6 } from '../../client/game/scenes/crime-scenes/case6';
+import { case7 } from '../../client/game/scenes/crime-scenes/case7';
 
-// Sample case for MVP
+// Legacy sample case for MVP (now using case1 from crime-scenes)
+// @deprecated Use case1 from crime-scenes instead
 export const CASE_001: Case = {
   id: 'case_001',
   title: "The Moderator's Last Ban",
@@ -263,24 +267,24 @@ export const CASE_001: Case = {
   ],
 };
 
-export const ALL_CASES: Case[] = [CASE_001, case2, case3, case5, case6];
+export const ALL_CASES: Case[] = [case1, case2, case3, case4, case5, case6, case7];
 
-// Map day of week to case
-// Wednesday (3) -> case5
-// Thursday (4) -> case6
+// Map day of week to case (Monday = case1, Sunday = case7)
+// JavaScript getDay(): 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+// We want: Monday (1) -> case1, Tuesday (2) -> case2, ..., Sunday (0) -> case7
 const DAY_TO_CASE: Record<number, Case> = {
-  0: case2, // Sunday
-  1: case3, // Monday
-  2: CASE_001, // Tuesday
-  3: case5, // Wednesday
-  4: case6, // Thursday
-  5: case2, // Friday
-  6: case3, // Saturday
+  1: case1, // Monday -> Case 1
+  2: case2, // Tuesday -> Case 2
+  3: case3, // Wednesday -> Case 3
+  4: case4, // Thursday -> Case 4
+  5: case5, // Friday -> Case 5
+  6: case6, // Saturday -> Case 6
+  0: case7, // Sunday -> Case 7
 };
 
 export const getCurrentCase = (): Case => {
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 
-  return DAY_TO_CASE[dayOfWeek] || CASE_001;
+  return DAY_TO_CASE[dayOfWeek] || case1;
 };
